@@ -1,0 +1,24 @@
+name: lyren
+
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile.api
+    env_file: ../../.env
+    # Bound to loopback: the public edge is a TLS reverse proxy, added in Phase 3.
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      # Read-only OCI session credentials. Replaced by an instance principal on the VM.
+      - ${HOME}/.oci:/home/lyren/.oci:ro
+      - lyren-cache:/srv/.lyren-cache
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1g
+
+volumes:
+  lyren-cache:
