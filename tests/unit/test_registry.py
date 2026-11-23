@@ -89,3 +89,29 @@ def test_alias_with_no_callable_candidate_raises():
 
     with pytest.raises(ModelNotAvailableError):
         registry.resolve("lyren/x")
+
+
+def test_the_local_model_is_not_callable_until_a_probe_verifies_it():
+    registry = ModelRegistry()
+
+    assert registry.spec("local/llama-cpp").availability is Availability.UNVERIFIED
+    with pytest.raises(ModelNotAvailableError):
+        registry.resolve("lyren/local")
+
+
+def test_the_local_model_does_not_bill():
+    assert ModelRegistry().spec("local/llama-cpp").bills is False
+
+
+def test_a_verified_local_probe_makes_the_local_alias_resolvable():
+    registry = ModelRegistry()
+
+    registry.apply_probe("local/llama-cpp", Availability.VERIFIED, when=date(2026, 11, 24))
+
+    assert [s.id for s in registry.resolve("lyren/local")] == ["local/llama-cpp"]
+
+
+def test_an_unverified_local_candidate_leaves_other_aliases_unchanged():
+    registry = ModelRegistry()
+
+    assert [s.id for s in registry.resolve("lyren/fast")] == ["meta.llama-4-scout-17b-16e-instruct"]

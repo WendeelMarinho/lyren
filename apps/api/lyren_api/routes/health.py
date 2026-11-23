@@ -46,6 +46,9 @@ def readyz(
         "checks": checks,
         "principals": principal_count,
         "single_principal_dev_mode": settings.principals_file is None,
+        "providers": sorted(provider.inner_providers())
+        if hasattr(provider, "inner_providers")
+        else [],
         "deployment_calls_today": get_usage_meter().deployment_usage().calls_today,
         "deployment_calls_per_day": settings.deployment_calls_per_day,
     }

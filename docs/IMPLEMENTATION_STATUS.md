@@ -34,6 +34,10 @@ without the verification named.
 | Record/replay cache: key stability, pin invalidation, four modes | `tests/unit/test_cache.py` |
 | OCI error mapping: 404 vs zero-quota 429 vs real throttling | `tests/unit/test_oci_provider.py` |
 | Request id propagation and echo | `tests/unit/test_api.py` |
+| Provider router dispatches by model and names what is configured | `tests/unit/test_router.py` |
+| Local llama.cpp provider: probe, parse, loading server, unreachable server | `tests/unit/test_local_llama.py` |
+| An unsupported role is refused by the local provider rather than dropped | `tests/unit/test_local_llama.py` |
+| The local model is not callable until a probe verifies it | `tests/unit/test_registry.py` |
 | Secret redaction in logs | `lyren_core.logging` |
 | Deterministic graders: exact, cased, contains, regex, numeric, json keys | `tests/unit/test_eval_graders.py` |
 | Numeric parsing refuses to guess a thousands separator | `tests/unit/test_eval_graders.py` |
@@ -49,7 +53,7 @@ without the verification named.
 | Provider 401/403 reported as a credential failure, not a model failure | `tests/unit/test_oci_provider.py` |
 
 Gates: `ruff check`, `ruff format --check`, `mypy --strict` over `packages` and `apps`, and
-`pytest` — **107 tests passing, 88% coverage** (floor 80%, enforced in CI).
+`pytest` — **124 tests passing, 87% coverage** (floor 80%, enforced in CI).
 
 ## Implemented, hand-checked
 
@@ -60,7 +64,7 @@ Gates: `ruff check`, `ruff format --check`, `mypy --strict` over `packages` and 
 
 ## Planned
 
-Local llama.cpp provider as a fourth routing arm; streaming SSE; `/v1/embeddings`; web UI on assistant-ui;
+GGUF selection and the local benchmark, which need ARM hardware; streaming SSE; `/v1/embeddings`; web UI on assistant-ui;
 Terraform modules; Oracle AI Database persistence; document pipeline and hybrid retrieval; memory
 system; LangGraph orchestration; isolated executor; Lyren Code via opencode; evaluation harness.
 
@@ -105,8 +109,15 @@ in-process call cap. Infrastructure lives in a separate private repository, `lyr
    invoice exists the money cap cannot be enforced and the harness reports `cost=UNKNOWN`. The first
    real benchmark run is the calibration that fixes this.
 3. Max context window per callable model — not exposed by the API, not measured, left `None`.
-4. **`baseline-v2` has no measurement yet.** The task set (22 tasks, 20 discriminating + 2 weakness
-   probes) is built and its loader is tested, but the run on 2026-11-24 aborted: the browser session
-   token had expired six minutes earlier, so all 44 calls failed on credentials and nothing billed.
-   Only `baseline-v1` has recorded numbers. See
-   [docs/research/baseline-v1-results.md](research/baseline-v1-results.md).
+4. **No GGUF is selected and no local benchmark exists.** The provider is built and tested, but
+   measuring llama.cpp on an x86 development machine answers nothing about 2 ARM OCPUs, so the
+   selection runs on the target hardware in Phase 3.
+   → [local inference plan](research/local-inference-plan.md)
+5. **Quality is not measurable at the current task-set size.** `baseline-v2` ran (22 tasks, 20
+   discriminating, 2 attempts each, 131 calls) and the three callable models landed within 2.5
+   points — about 0.36 of a standard error. Separating them by 5 points would take roughly 680
+   tasks per model. Cost and latency separate cleanly at this size; quality does not, which is why
+   the router uses a quality *floor* rather than a ranking.
+   → [baseline-v2 results](research/baseline-v2-results.md)
+6. **No per-token price is known**, so every run reports `cost=UNKNOWN` and spend is bounded by call
+   count rather than by money.

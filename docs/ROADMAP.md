@@ -28,10 +28,16 @@ not separate quality, so routing goes on cost and latency under a quality floor.
 **Done:** principals, per-person quotas and a deployment-wide cap, required by the platform being
 shared.
 
-**Next, in this order:** `LocalLlamaProvider` over llama.cpp with GGUF selection in the 1B-4B range
-driven by the same harness — it is also the only option that keeps prompt content on our own host;
-then streaming SSE with cancellation, `/v1/embeddings` on `cohere.embed-v4.0`, and the first web UI
-on assistant-ui.
+**Done:** `LocalLlamaProvider` and a `ProviderRouter` that dispatches on the model's provider, so
+alias fallback can cross a provider boundary. `lyren/local` is the only alias on which prompt content
+never leaves our host.
+
+**Deferred to Phase 3 on purpose:** GGUF selection and the local benchmark. Measuring llama.cpp on an
+x86 development machine answers nothing about 2 ARM OCPUs.
+→ [local inference plan](research/local-inference-plan.md)
+
+**Next:** streaming SSE with cancellation, `/v1/embeddings` on `cohere.embed-v4.0`, and the first web
+UI on assistant-ui.
 
 The order changed on 2026-11-24. Local inference was first only because it was free; with spend
 authorised, the baseline measurement comes first — it is what makes every later component

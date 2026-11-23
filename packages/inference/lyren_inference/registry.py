@@ -83,6 +83,21 @@ _SEED: tuple[ModelSpec, ...] = (
         verified_at=_PROBED_ON,
         note="gemini-2-5-flash-requests-per-minute-count is 0 in this tenancy.",
     ),
+    ModelSpec(
+        id="local/llama-cpp",
+        vendor="local",
+        provider=PROVIDER_LOCAL,
+        api_format=ApiFormat.GENERIC,
+        pinned_version="server-declared",
+        capabilities=frozenset({Capability.CHAT}),
+        availability=Availability.UNVERIFIED,
+        bills=False,
+        note=(
+            "Whichever GGUF the llama.cpp server has loaded. Not callable until probed: a server "
+            "that is down or holding no model must not be routed to. The GGUF choice itself waits "
+            "for ARM hardware — benchmarking it on x86 answers nothing about 2 ARM OCPUs."
+        ),
+    ),
     *(
         ModelSpec(
             id=model_id,
@@ -118,7 +133,13 @@ class AliasPolicy:
 
 
 _ALIASES: tuple[AliasPolicy, ...] = (
-    AliasPolicy("lyren/fast", ("meta.llama-4-scout-17b-16e-instruct",), max_output_tokens=1024),
+    AliasPolicy(
+        "lyren/fast",
+        ("meta.llama-4-scout-17b-16e-instruct", "local/llama-cpp"),
+        max_output_tokens=1024,
+    ),
+    # The only alias on which prompt content never leaves our own host.
+    AliasPolicy("lyren/local", ("local/llama-cpp",), max_output_tokens=1024),
     AliasPolicy(
         "lyren/deep",
         ("cohere.command-a-03-2025", "meta.llama-3.3-70b-instruct"),
@@ -136,7 +157,7 @@ _ALIASES: tuple[AliasPolicy, ...] = (
     ),
     AliasPolicy(
         "lyren/auto",
-        ("meta.llama-4-scout-17b-16e-instruct", "meta.llama-3.3-70b-instruct"),
+        ("meta.llama-4-scout-17b-16e-instruct", "meta.llama-3.3-70b-instruct", "local/llama-cpp"),
     ),
 )
 

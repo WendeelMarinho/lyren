@@ -25,9 +25,10 @@ Clients (OpenAI SDK, curl, CLI, web UI)
      Conversation / Context / Memory / Retrieval                    NOT IMPLEMENTED
      Agent orchestrator (LangGraph)                                 NOT IMPLEMENTED
         |
-   Providers
+   ProviderRouter -> dispatches on ModelSpec.provider              IMPLEMENTED
      OCIGenerativeAIProvider                                        IMPLEMENTED
-     LocalLlamaProvider (llama.cpp)                                 NOT IMPLEMENTED
+     LocalLlamaProvider (llama.cpp)                                 IMPLEMENTED
+       GGUF selection and local benchmark                           NOT DONE (needs ARM)
         |
    Data: Oracle AI Database, Object Storage, model cache            NOT IMPLEMENTED
 ```
@@ -39,7 +40,14 @@ vendor SDK; providers never know about HTTP. This is the one abstraction worth i
 is what makes the router, the cache and the benchmark harness compose.
 
 **The cache is a decorator, not a layer.** `CachingChatProvider` wraps any `ChatProvider`, so
-recording and replaying is orthogonal to which provider is in use.
+recording and replaying is orthogonal to which provider is in use. It wraps the *router*, so a cache
+hit never reaches dispatch and one cassette store covers every provider — the key already includes
+`provider`.
+
+**`lyren/local` is a privacy boundary, not only a cheap arm.** Every prompt sent to an OCI-backed
+alias is processed by Oracle as a third party; `lyren/local` is the only alias on which content stays
+on our host. A cheap arm can be dropped when the budget grows, so this one stays on the roadmap
+independently of cost. → [ADR-0007](decisions/0007-provider-router-and-local-boundary.md)
 
 **Availability is data, not configuration.** `Availability` per model, with a probe timestamp. The
 chat route records a verdict when a candidate fails, so catalog drift is observed rather than

@@ -27,8 +27,9 @@ rather than pretending otherwise. See [docs/IMPLEMENTATION_STATUS.md](docs/IMPLE
 | Evaluation harness: frozen task set, deterministic graders, benchmark runner | implemented, tested |
 | Spend guards: call cap and money cap, failing closed on unknown prices | implemented, tested |
 | OCI Generative AI chat provider | implemented; verified by hand against the live service |
+| Local llama.cpp provider + provider router dispatching by model | implemented, tested |
 | Streaming SSE, embeddings, files, agent runs, memory | **not implemented** — these return an explicit error |
-| Local llama.cpp inference | **not implemented** — Phase 2 |
+| GGUF selection and local benchmark | **not done** — needs ARM hardware, Phase 3 |
 | Web UI | **not implemented** — Phase 2 |
 
 ## Run it
@@ -109,7 +110,8 @@ spending uncapped. See [ADR-0005](docs/decisions/0005-spend-control-in-process.m
 ```
 apps/api            FastAPI application
 packages/core       settings, errors, structured logging, request ids, principals, metering
-packages/inference  model registry, provider ports, record/replay cache, OCI provider
+packages/inference  model registry, provider ports, record/replay cache, provider router,
+                    OCI and local llama.cpp providers
 packages/evaluation frozen task sets, graders, benchmark runner, spend guards
 tests/unit          offline tests — no network, no credentials
 infrastructure/     Dockerfile (arm64 target), compose, CI

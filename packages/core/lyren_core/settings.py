@@ -57,6 +57,11 @@ class Settings(BaseSettings):
     max_output_tokens: int = 1024
     request_timeout_seconds: float = 120.0
 
+    local_enabled: bool = False
+    local_base_url: str = "http://127.0.0.1:8080"
+    local_model_id: str = "local/unspecified"
+    """Which GGUF the llama.cpp server has loaded. Declared, never guessed."""
+
     cache_mode: CacheMode = CacheMode.OFF
     cache_dir: Path = Path(".lyren-cache")
 

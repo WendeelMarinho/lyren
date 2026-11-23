@@ -79,6 +79,11 @@ class CachingChatProvider:
         self._mode = mode
         self.name = f"cached:{inner.name}"
 
+    def inner_providers(self) -> tuple[str, ...]:
+        """What the wrapped provider actually serves, for readiness reporting."""
+        inner = getattr(self._inner, "providers", None)
+        return inner() if callable(inner) else (self._inner.name,)
+
     def chat(self, spec: ModelSpec, request: ChatRequest) -> ChatResponse:
         if self._mode is CacheMode.OFF:
             return self._inner.chat(spec, request)
