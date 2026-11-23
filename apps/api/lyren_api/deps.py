@@ -6,6 +6,7 @@ from functools import lru_cache
 
 from fastapi import Depends, Header
 
+from lyren_core.credentials import CredentialStore, LoginThrottle
 from lyren_core.errors import AuthError, ConfigError
 from lyren_core.federation import SESSION_TOKEN_PREFIX, IdTokenVerifier, SessionTokenIssuer
 from lyren_core.identity import Principal, PrincipalStore, hash_key
@@ -104,6 +105,23 @@ def get_token_issuer() -> SessionTokenIssuer:
     if not settings.session_secret:
         raise ConfigError("browser sign-in needs LYREN_SESSION_SECRET")
     return SessionTokenIssuer(settings.session_secret, ttl_seconds=settings.session_ttl_seconds)
+
+
+@lru_cache(maxsize=1)
+def get_credential_store() -> CredentialStore:
+    settings = get_settings()
+    if settings.credentials_file is None:
+        raise ConfigError("password sign-in needs LYREN_CREDENTIALS_FILE")
+    return CredentialStore(settings.credentials_file)
+
+
+@lru_cache(maxsize=1)
+def get_login_throttle() -> LoginThrottle:
+    settings = get_settings()
+    return LoginThrottle(
+        max_attempts=settings.login_max_attempts,
+        window_seconds=settings.login_attempt_window_seconds,
+    )
 
 
 @lru_cache(maxsize=1)

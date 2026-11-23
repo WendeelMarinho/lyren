@@ -16,6 +16,12 @@ if a control is listed as enforced, there is a test for it.
 | Unknown key, revoked key and disabled principal fail **identically** | `PrincipalStore.resolve` |
 | Revocation keeps the record (`revoked_at`), preserving the access trail | `ApiKeyRecord` |
 | A principal may hold several keys, so one can be rotated alone | `ApiKeyRecord.principal_id` |
+| Passwords hashed with Argon2id at parameters the ARM target can serve | `lyren_core/credentials.py` |
+| A missing account and a wrong password cost the same and answer the same | `CredentialStore.verify` |
+| Sign-up refusals are worded identically, so addresses cannot be enumerated | `routes/auth.py` |
+| Sign-up restricted to declared addresses, with an optional one-time invite token | `routes/auth.py` |
+| Sign-in attempts throttled per address, protecting passwords and CPU alike | `lyren_core/credentials.py` |
+| Password hashes stored mode `600`, written atomically, never in Git | `CredentialStore` |
 | Google id tokens fully verified: signature, `iss`, `aud`, `exp`, `email_verified` | `lyren_core/federation.py` |
 | Optional Workspace-domain gate, independent of the address allow-list | `IdTokenVerifier` |
 | No auto-provisioning: an unclaimed Google account is refused | `PrincipalStore.resolve_email` |
@@ -49,6 +55,7 @@ Recorded in [ADR-0006](decisions/0006-principals-not-api-keys.md).
 | Audit log of privileged and per-principal operations | attribution exists in metering but is not durable | 3 |
 | Key rotation and revocation workflow | revocation works, but by hand-editing a JSON file | 3/5 |
 | Session revocation before expiry | disabling a principal takes effect within one session TTL, not instantly | 5 |
+| Password reset | needs outbound email; today an administrator clears the record so the person re-registers | 3 |
 | Per-principal data isolation in storage | no persistence yet, so nothing is co-mingled either | 5 |
 | Verifiable deletion of a person's data | required before real data is stored | 5 |
 | Prompt-injection defences for retrieved documents | no retrieval exists yet | 5 |

@@ -6,14 +6,18 @@
     "To revoke, set revoked_at. Do not delete the record: the audit trail needs it.",
     "emails are the verified Google addresses that may sign in as this principal.",
     "A principal with no emails cannot use the web interface, only its API keys.",
-    "One address belongs to exactly one principal; a duplicate fails at startup."
+    "One address belongs to exactly one principal; a duplicate fails at startup.",
+    "registration_token_hash is optional but recommended: without it, whoever signs up first",
+    "with a declared address takes the account. Mint one per person and hand it over:",
+    "  T=$(openssl rand -hex 16); echo $T; printf %s $T | sha256sum"
   ],
   "principals": [
     {
       "id": "ana",
       "name": "Ana Souza",
       "quota": { "requests_per_minute": 20, "calls_per_day": 300, "max_output_tokens": 2048 },
-      "emails": ["ana@example.com"]
+      "emails": ["ana@example.com"],
+      "registration_token_hash": "sha256-of-a-one-time-invite-token"
     },
     {
       "id": "bruno",

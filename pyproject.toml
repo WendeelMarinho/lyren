@@ -6,11 +6,12 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115,<1.0",
     "uvicorn[standard]>=0.34,<1.0",
-    "pydantic>=2.9,<3.0",
+    "pydantic[email]>=2.9,<3.0",
     "pydantic-settings>=2.6,<3.0",
     "oci>=2.140,<3.0",
     "httpx>=0.28,<1.0",
     "pyjwt[crypto]>=2.10,<3.0",
+    "argon2-cffi>=23.1,<26.0",
 ]
 
 [project.optional-dependencies]
@@ -49,7 +50,8 @@ ignore = ["ANN401"]
 extend-immutable-calls = ["fastapi.Depends", "fastapi.Header", "fastapi.Query"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101", "ANN"]
+# S105/S106: test fixtures legitimately hold literal passwords and token values.
+"tests/*" = ["S101", "S105", "S106", "ANN"]
 
 [tool.mypy]
 python_version = "3.12"

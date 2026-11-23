@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     principals_file: Path | None = None
     """The real authentication mechanism for a shared deployment."""
 
+    credentials_file: Path | None = None
+    """Where password hashes live until the database arrives."""
+    login_max_attempts: int = 5
+    login_attempt_window_seconds: float = 300.0
+
     session_secret: str | None = None
     """Signs browser session tokens. Required for Google sign-in."""
     session_ttl_seconds: int = 1800

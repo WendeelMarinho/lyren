@@ -23,6 +23,14 @@ without the verification named.
 | Embeddings count against the principal's quota | `tests/unit/test_embeddings_api.py` |
 | Embeddings cached separately per input type | `tests/unit/test_cache.py` |
 | A key resolves to a named principal; unknown, revoked and disabled fail alike | `tests/unit/test_identity.py` |
+| Sign-up works for a declared address and is refused for any other | `tests/unit/test_auth_api.py` |
+| Registering twice and an unclaimed address answer identically | `tests/unit/test_auth_api.py` |
+| An optional registration token is required when a principal declares one | `tests/unit/test_auth_api.py` |
+| A wrong password and an unknown address answer identically | `tests/unit/test_auth_api.py` |
+| Repeated failures lock an address out; success clears the counter | `test_auth_api.py`, `test_credentials.py` |
+| Password change requires the current password and replaces the old one | `tests/unit/test_auth_api.py` |
+| Password length enforced; the address itself refused as a password | `tests/unit/test_credentials.py` |
+| Hashes persist as argon2 strings, mode 600, with no temporary file left behind | `tests/unit/test_credentials.py` |
 | Google id token verified for signature, issuer, audience, expiry, email_verified | `tests/unit/test_federation.py` |
 | A token for another audience or signed by another key is refused | `tests/unit/test_federation.py` |
 | Workspace domain restriction, including refusing a personal account | `tests/unit/test_federation.py` |
@@ -75,7 +83,7 @@ without the verification named.
 | Provider 401/403 reported as a credential failure, not a model failure | `tests/unit/test_oci_provider.py` |
 
 Gates: `ruff check`, `ruff format --check`, `mypy --strict` over `packages` and `apps`, and
-`pytest` — **189 tests passing, 87% coverage** (floor 80%, enforced in CI).
+`pytest` — **221 tests passing, 88% coverage** (floor 80%, enforced in CI).
 
 ## Implemented, hand-checked
 

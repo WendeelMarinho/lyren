@@ -43,7 +43,14 @@ class Principal:
     allowed_models: frozenset[str] | None = None
     """None means every callable model and alias. A set restricts to those names."""
     emails: frozenset[str] = frozenset()
-    """Verified Google addresses that map to this principal. Empty means no web sign-in."""
+    """Verified addresses that map to this principal. Empty means no web sign-in."""
+    registration_token_hash: str | None = None
+    """When set, direct sign-up also requires this one-time token.
+
+    Closes a real window: between an address being declared and the person signing up, whoever
+    registers first would otherwise take the account. Left unset, the declared address alone is
+    enough and that race exists.
+    """
     enabled: bool = True
 
     def may_use(self, model: str) -> bool:
@@ -156,6 +163,11 @@ class PrincipalStore:
                     else None
                 ),
                 emails=frozenset(str(e).strip().lower() for e in entry.get("emails", ())),
+                registration_token_hash=(
+                    str(entry["registration_token_hash"])
+                    if entry.get("registration_token_hash")
+                    else None
+                ),
                 enabled=bool(entry.get("enabled", True)),
             )
             for entry in raw.get("principals", [])

@@ -48,9 +48,13 @@ public sign-in config endpoint. Both questions that blocked the UI are answered:
 repository, `lyren-web`, and browsers authenticate with Google.
 → [ADR-0009](decisions/0009-google-sign-in.md)
 
-**Next:** the Next.js scaffold in `lyren-web`, which needs the Google OAuth client to exist before it
-can sign in. Nothing in the API waits on it — the client id and the domain restriction are already
-configuration.
+**Done:** direct sign-up and sign-in with a password, restricted to declared addresses, throttled
+per address, with an optional one-time invite token. Google will be added alongside it rather than
+replacing it. → [ADR-0010](decisions/0010-direct-password-sign-up.md)
+
+**Next:** the Next.js scaffold in `lyren-web`. It is no longer blocked — password sign-in works
+today, so the UI can be built and Google added later without changing the client's contract: both
+paths mint the same session token.
 
 The order changed on 2026-11-24. Local inference was first only because it was free; with spend
 authorised, the baseline measurement comes first — it is what makes every later component
