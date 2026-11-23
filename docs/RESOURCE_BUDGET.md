@@ -35,6 +35,16 @@ Observability stays off-box. Self-hosting Prometheus and Grafana would cost roug
 flag, so a fallback never crosses into a billing provider implicitly. Per-alias
 `max_output_tokens` caps a client that asks for more.
 
-**Unknown:** whether OCI Generative AI on-demand calls bill on this account, and at what per-token
-price. Probe calls on 2026-11-23 succeeded with zero credits on the account. Until the cost report
-confirms, treat every call as billable.
+`lyren_eval.budget.BudgetGuard` is the hard stop: a **call cap** that works without prices, and a
+**money cap** that refuses the call when a model's price is unknown rather than assuming it is free.
+An OCI budget only alerts and is not the control. → [ADR-0005](decisions/0005-spend-control-in-process.md)
+
+**Unknown:** the per-token price of each model, and therefore whether the 2026-11-23 probe calls
+billed — 24h later the cost report still showed zero. Until an invoice exists, every call is treated
+as billable and bounded by call count rather than by money.
+
+**$300 allowance, reported 2026-11-24.** No promotional credit appears in the API, so this is read as
+pay-as-you-go headroom with no automatic stop. Spend it on bursty, high-value work — benchmarks and
+evaluation runs — and keep the always-on components inside the Always Free envelope. A permanent
+4 OCPU / 24 GB A1 instance would cost roughly $55/month at list price and consume the whole allowance
+in about five months, for capacity the platform does not yet need.

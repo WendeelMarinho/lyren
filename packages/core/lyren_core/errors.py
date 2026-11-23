@@ -41,3 +41,21 @@ class ModelDisabledByQuotaError(ProviderError):
 
 class CacheMissError(LyrenError):
     code = "cache_miss"
+
+
+class BudgetExceededError(LyrenError):
+    """The configured hard spend cap would be crossed by this call."""
+
+    code = "budget_exceeded"
+    http_status = 402
+
+
+class BudgetUnenforceableError(LyrenError):
+    """A hard cap is configured but the price of this model is unknown.
+
+    Failing closed is deliberate: allowing the call would mean an uncapped spend on a
+    pay-as-you-go account, which is the exact risk the cap exists to remove.
+    """
+
+    code = "budget_unenforceable"
+    http_status = 409

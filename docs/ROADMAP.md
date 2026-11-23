@@ -14,13 +14,23 @@ cache, OCI provider, offline tests, CI, arm64 Dockerfile, compose.
 **Accepted:** lint, strict typecheck and 27 tests pass with 83% coverage; the API serves `/healthz`,
 `/readyz`, `/v1/models` and non-streaming `/v1/chat/completions` with no paid resource required.
 
-## Phase 2 — Inference Gateway · NEXT
-Local `LocalLlamaProvider` over llama.cpp; GGUF selection driven by a reproducible benchmark
-(tokens/s, time-to-first-token, RAM, pt-BR and en quality, tool calling) across the 1B-4B range;
-streaming SSE with cancellation; `/v1/embeddings` on `cohere.embed-v4.0`; usage metering; the first
-web UI on assistant-ui.
-**Acceptance:** the OpenAI SDK lists models and holds a streaming conversation with a **local**
-model, with no OCI call.
+## Phase 2 — Evaluation first, then the gateway · IN PROGRESS
+**Done:** evaluation harness — frozen task set, deterministic graders, benchmark runner, spend
+ledger and the two caps.
+
+**Next, in this order:** calibration run of `baseline-v1` across the three callable OCI models to
+establish the baseline and the real per-token cost; then `LocalLlamaProvider` over llama.cpp with
+GGUF selection in the 1B-4B range driven by the same harness; then streaming SSE with cancellation,
+`/v1/embeddings` on `cohere.embed-v4.0`, and the first web UI on assistant-ui.
+
+The order changed on 2026-11-24. Local inference was first only because it was free; with spend
+authorised, the baseline measurement comes first — it is what makes every later component
+falsifiable, and the local model then enters as a fourth arm with a measured cost profile instead of
+an assumed one.
+
+**Acceptance:** `baseline-v1` has a recorded score, latency and token cost per model, reproducible
+from cassettes with zero provider calls; and the OpenAI SDK holds a streaming conversation with a
+local model.
 
 ## Phase 3 — OCI Deployment
 Terraform modules, each resource classified Always-Free-confirmed / credit-covered / pay-per-use /
@@ -56,6 +66,7 @@ approval before any sensitive action.
 Temporal memory, GraphRAG, context compression, tool selection, adaptive routing, prompt
 optimisation, evaluation-driven improvement. Experiments stay out of the main runtime until tested.
 
-## Cross-cutting, starting now
-The evaluation harness is built alongside Phase 2, not after Phase 8. Until a frozen task set and a
-deliberately weak baseline exist, no later component can be shown to have helped.
+## Cross-cutting
+The evaluation harness exists as of Phase 2 rather than Phase 8, so every later component has to beat
+a recorded baseline to earn its place. `baseline-v1` is deliberately small and fully machine-graded;
+it grows as capabilities land, and a task is never changed to make a result look better.

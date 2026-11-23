@@ -16,6 +16,8 @@ rather than pretending otherwise. See [docs/IMPLEMENTATION_STATUS.md](docs/IMPLE
 | `POST /v1/chat/completions`, non-streaming | implemented, tested |
 | Pinned model registry + alias routing + fallback | implemented, tested |
 | Record/replay cache for model calls | implemented, tested |
+| Evaluation harness: frozen task set, deterministic graders, benchmark runner | implemented, tested |
+| Spend guards: call cap and money cap, failing closed on unknown prices | implemented, tested |
 | OCI Generative AI chat provider | implemented; verified by hand against the live service |
 | Streaming SSE, embeddings, files, agent runs, memory | **not implemented** — these return an explicit error |
 | Local llama.cpp inference | **not implemented** — Phase 2 |
@@ -49,14 +51,32 @@ from openai import OpenAI
 
 client = OpenAI(base_url="http://127.0.0.1:8000/v1", api_key="<your key>")
 print([m.id for m in client.models.list().data])
-print(client.chat.completions.create(
-    model="lyren/fast",
-    messages=[{"role": "user", "content": "ping"}],
-).choices[0].message.content)
+print(
+    client.chat.completions.create(
+        model="lyren/fast",
+        messages=[{"role": "user", "content": "ping"}],
+    )
+    .choices[0]
+    .message.content
+)
 ```
 
 `stream=True` is refused with a clear error. The surface is *partially* OpenAI-compatible and the
 docs never claim more than is tested.
+
+## Benchmark a model
+
+The frozen baseline task set has 14 tasks graded by machine — no LLM judging the LLM. This is the
+command that spends money, so it runs behind a call cap:
+
+```bash
+.venv/bin/python -m lyren_eval --model lyren/fast --taskset baseline-v1 --max-calls 20
+```
+
+Prices are not configured, because Oracle does not expose per-token prices through the API and they
+have not been measured. The run therefore reports token counts and `cost=UNKNOWN` rather than a
+guess. Passing `--max-spend` without a `--price-book` makes the guard **refuse** the call instead of
+spending uncapped. See [ADR-0005](docs/decisions/0005-spend-control-in-process.md).
 
 ## Verify
 
@@ -72,6 +92,7 @@ docs never claim more than is tested.
 apps/api            FastAPI application
 packages/core       settings, errors, structured logging, request ids
 packages/inference  model registry, provider ports, record/replay cache, OCI provider
+packages/evaluation frozen task sets, graders, benchmark runner, spend guards
 tests/unit          offline tests — no network, no credentials
 infrastructure/     Dockerfile (arm64 target), compose, CI
 docs/               architecture, discovery, reuse matrix, ADRs

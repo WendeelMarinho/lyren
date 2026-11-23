@@ -35,6 +35,13 @@ Free envelope (~2 OCPU ARM / 12 GB RAM running 24/7). A limit is a ceiling, not 
 
 To resolve: Console → Billing & Cost Management.
 
+**Re-checked 2026-11-24**, after a $300 allowance was reported as available: credits are still empty
+across `CREDIT`, `ALLCREDIT` and `EXPIREDCREDIT`, recorded cost is still zero, and no OCI budget is
+configured. So the $300 reads as a payment-method-backed allowance, not an Oracle credit grant —
+which means **nothing stops billing at $300**. The spend cap is enforced in the application instead;
+see [ADR-0005](decisions/0005-spend-control-in-process.md). The probe calls of 2026-11-23 had still
+registered no cost 24h later, which is consistent either with them being free or with usage lag.
+
 ## Compute limits
 
 | Limit | Value | Scope |

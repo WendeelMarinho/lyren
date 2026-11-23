@@ -28,6 +28,7 @@ build-backend = "hatchling.build"
 packages = [
     "packages/core/lyren_core",
     "packages/inference/lyren_inference",
+    "packages/evaluation/lyren_eval",
     "apps/api/lyren_api",
 ]
 
@@ -37,7 +38,7 @@ package = true
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["packages/core", "packages/inference", "apps/api", "tests"]
+src = ["packages/core", "packages/inference", "packages/evaluation", "apps/api", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "ANN", "S", "TID"]
@@ -52,7 +53,7 @@ extend-immutable-calls = ["fastapi.Depends", "fastapi.Header", "fastapi.Query"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-mypy_path = "packages/core:packages/inference:apps/api"
+mypy_path = "packages/core:packages/inference:packages/evaluation:apps/api"
 disallow_any_explicit = false
 [[tool.mypy.overrides]]
 module = ["oci.*"]
@@ -60,5 +61,5 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q --cov=lyren_core --cov=lyren_inference --cov=lyren_api --cov-report=term-missing"
-pythonpath = ["packages/core", "packages/inference", "apps/api"]
+addopts = "-q --cov=lyren_core --cov=lyren_inference --cov=lyren_eval --cov=lyren_api --cov-report=term-missing"
+pythonpath = ["packages/core", "packages/inference", "packages/evaluation", "apps/api"]

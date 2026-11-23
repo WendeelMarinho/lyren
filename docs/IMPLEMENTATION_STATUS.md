@@ -1,6 +1,6 @@
 # Implementation Status
 
-Updated **2026-11-23**. The one place that says what is real. Five states, and nothing is promoted
+Updated **2026-11-24**. The one place that says what is real. Five states, and nothing is promoted
 without the verification named.
 
 - **Verified** — implemented, with passing automated tests.
@@ -25,9 +25,17 @@ without the verification named.
 | OCI error mapping: 404 vs zero-quota 429 vs real throttling | `tests/unit/test_oci_provider.py` |
 | Request id propagation and echo | `tests/unit/test_api.py` |
 | Secret redaction in logs | `lyren_core.logging` |
+| Deterministic graders: exact, cased, contains, regex, numeric, json keys | `tests/unit/test_eval_graders.py` |
+| Numeric parsing refuses to guess a thousands separator | `tests/unit/test_eval_graders.py` |
+| Frozen baseline task set loads; duplicate ids and unknown graders rejected | `tests/unit/test_eval_runner.py` |
+| Benchmark runner: pass/fail/error accounting, per-tag breakdown, latency | `tests/unit/test_eval_runner.py` |
+| Call cap enforced with no price information | `tests/unit/test_eval_budget.py` |
+| Money cap fails closed when a model has no configured price | `tests/unit/test_eval_budget.py` |
+| Cache hits counted but never charged | `tests/unit/test_eval_budget.py` |
+| Spend ledger flags an incomplete cost total | `tests/unit/test_eval_budget.py` |
 
 Gates: `ruff check`, `ruff format --check`, `mypy --strict` over `packages` and `apps`, and
-`pytest` — **27 tests passing, 83% coverage** (floor 80%, enforced in CI).
+`pytest` — **61 tests passing, 81% coverage** (floor 80%, enforced in CI).
 
 ## Implemented, hand-checked
 
@@ -38,7 +46,7 @@ Gates: `ruff check`, `ruff format --check`, `mypy --strict` over `packages` and 
 
 ## Planned
 
-Local llama.cpp provider and GGUF benchmark; streaming SSE; `/v1/embeddings`; web UI on assistant-ui;
+Local llama.cpp provider as a fourth routing arm; streaming SSE; `/v1/embeddings`; web UI on assistant-ui;
 Terraform modules; Oracle AI Database persistence; document pipeline and hybrid retrieval; memory
 system; LangGraph orchestration; isolated executor; Lyren Code via opencode; evaluation harness.
 
@@ -58,11 +66,19 @@ is currently the contract), `TEST_STRATEGY.md`.
 
 ## Needs authorisation
 
-Creating any OCI resource; enabling `LYREN_OCI_ENABLED` in a loop that burns tokens; exposing the API
-to the internet; requesting a service-limit increase; making this repository public.
+Creating any OCI resource — **including the protective OCI budget with alert rules**, which is free
+but is still a resource; exposing the API to the internet; requesting a service-limit increase (now
+worth doing for Gemini and Grok, whose per-model quotas are 0); making this repository public.
+
+Spending on OCI Generative AI on-demand calls is **authorised** as of 2026-11-24, bounded by the
+in-process call cap.
 
 ## Open questions
 
-1. **Always Free or pay-as-you-go?** Unresolved via API. Console → Billing & Cost Management.
-2. **Did the 2026-11-23 probe calls bill, and at what per-token rate?** Usage data lags hours.
+1. **Always Free or pay-as-you-go?** Unresolved via API. A $300 allowance was reported on
+   2026-11-24, but no promotional credit appears in `CREDIT`/`ALLCREDIT`/`EXPIREDCREDIT`, so it reads
+   as pay-as-you-go headroom with **no automatic stop**. Console → Billing & Cost Management settles it.
+2. **Per-token price of each callable model.** Not exposed by the API, not measured. Until an
+   invoice exists the money cap cannot be enforced and the harness reports `cost=UNKNOWN`. The first
+   real benchmark run is the calibration that fixes this.
 3. Max context window per callable model — not exposed by the API, not measured, left `None`.
