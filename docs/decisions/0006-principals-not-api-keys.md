@@ -1,6 +1,6 @@
 # ADR-0006 — An API key identifies a person, not merely access
 
-**Date:** 2026-11-24 · **Status:** Accepted · **Supersedes the auth model of** [ADR-0001](0001-modular-monolith.md)
+**Date:** 2026-11-23 · **Status:** Accepted · **Supersedes the auth model of** [ADR-0001](0001-modular-monolith.md)
 
 ## Context
 Lyren was scoped as a personal platform and authenticated with a flat list of API key hashes in

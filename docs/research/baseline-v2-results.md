@@ -1,6 +1,6 @@
 # baseline-v2 — first measured run
 
-**Run 2026-11-24**, API-key auth. 22 tasks (20 discriminating + 2 weakness probes), **2 attempts per
+**Run 2026-11-23**, API-key auth. 22 tasks (20 discriminating + 2 weakness probes), **2 attempts per
 task**, temperature 0. 131 provider calls. Reproducible from cassettes with `LYREN_CACHE_MODE=replay`.
 
 ## Results
@@ -75,7 +75,7 @@ Reclassification goes into `baseline-v3`. `baseline-v2` stays frozen with this r
 - A price book, so the cost axis — the one axis that does discriminate — can be reported in money
   rather than in tokens.
 
-## Addendum, 2026-11-24: a gap the task set cannot see
+## Addendum, 2026-11-23: a gap the task set cannot see
 
 While verifying streaming end to end, `cohere.command-a-03-2025` answered a Portuguese prompt
 ("conte de 1 a 5") correctly and then continued **in Spanish**: *"¿Necesitas algo más? Puedo

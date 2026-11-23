@@ -95,7 +95,7 @@ def test_a_store_loads_from_file_with_quotas_and_revocations(tmp_path):
                         "key_hash": hash_key("ana-key"),
                         "principal_id": "ana",
                         "label": "laptop",
-                        "created_at": "2026-11-24",
+                        "created_at": "2026-11-23",
                     },
                     {
                         "key_hash": hash_key("old-key"),

@@ -71,12 +71,12 @@ degrades recall with no error and no obvious symptom. Lyren therefore makes `inp
 request contract rather than a default.
 
 Because the spaces are asymmetric, **absolute cosine similarity is not calibrated** — use the
-ranking. Verified on 2026-11-24: a correct match scored ~0.29 and an unrelated one ~0.11, so the
+ranking. Verified on 2026-11-23: a correct match scored ~0.29 and an unrelated one ~0.11, so the
 ordering is clear while neither number resembles a "90% match".
 
 ## Streaming: the two formats end differently, and one of them repeats itself
 
-Verified against the live service on 2026-11-24. Both formats stream over the SDK's `events()`
+Verified against the live service on 2026-11-23. Both formats stream over the SDK's `events()`
 iterator with `is_stream=True` on the chat request, and both pad each event with a `pad` field of
 filler characters.
 

@@ -1,6 +1,6 @@
 # Implementation Status
 
-Updated **2026-11-24** (third pass). The one place that says what is real. Five states, and nothing is promoted
+Updated **2026-11-23** (third pass). The one place that says what is real. Five states, and nothing is promoted
 without the verification named.
 
 - **Verified** — implemented, with passing automated tests.
@@ -90,8 +90,8 @@ Gates: `ruff check`, `ruff format --check`, `mypy --strict` over `packages` and 
 | Item | What was checked |
 |---|---|
 | `OCIGenerativeAIProvider` chat, GENERIC and COHERE formats | Live calls on 2026-11-23 returned completions from the three callable models |
-| `OCIGenerativeAIProvider.embed` | Live call on 2026-11-24 returned 1536-dim vectors with correct semantic ordering |
-| Streamed chat, both formats, end to end through the API | Live on 2026-11-24: 31 frames, quota counted, replay served from the cassette in 3 frames |
+| `OCIGenerativeAIProvider.embed` | Live call on 2026-11-23 returned 1536-dim vectors with correct semantic ordering |
+| Streamed chat, both formats, end to end through the API | Live on 2026-11-23: 31 frames, quota counted, replay served from the cassette in 3 frames |
 | Security-token, API-key and instance-principal auth paths | Security-token path exercised; the other two are written but not run |
 
 ## Planned
@@ -128,7 +128,7 @@ but is still a resource; exposing the API to the internet; requesting a service-
 worth doing for Gemini and Grok, whose per-model quotas are zero here); **making this repository
 public**.
 
-Spending on OCI Generative AI on-demand calls is **authorised** as of 2026-11-24, bounded by the
+Spending on OCI Generative AI on-demand calls is **authorised** as of 2026-11-23, bounded by the
 in-process call cap. Infrastructure lives in a separate private repository, `lyren-infra`.
 
 ## Open questions

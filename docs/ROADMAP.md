@@ -56,7 +56,7 @@ replacing it. → [ADR-0010](decisions/0010-direct-password-sign-up.md)
 today, so the UI can be built and Google added later without changing the client's contract: both
 paths mint the same session token.
 
-The order changed on 2026-11-24. Local inference was first only because it was free; with spend
+The order changed on 2026-11-23. Local inference was first only because it was free; with spend
 authorised, the baseline measurement comes first — it is what makes every later component
 falsifiable, and the local model then enters as a fourth arm with a measured cost profile instead of
 an assumed one.

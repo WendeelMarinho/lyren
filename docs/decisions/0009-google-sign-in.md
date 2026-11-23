@@ -1,6 +1,6 @@
 # ADR-0009 — Google sign-in exchanges an identity for a principal-bound token
 
-**Date:** 2026-11-24 · **Status:** Accepted · **Extends** [ADR-0006](0006-principals-not-api-keys.md)
+**Date:** 2026-11-23 · **Status:** Accepted · **Extends** [ADR-0006](0006-principals-not-api-keys.md)
 
 ## Context
 The web interface authenticates people with Google. The API authorises **principals** — identity

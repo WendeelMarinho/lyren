@@ -1,9 +1,9 @@
 # ADR-0005 — The hard spend cap lives in Lyren, not in an OCI budget
 
-**Date:** 2026-11-24 · **Status:** Accepted
+**Date:** 2026-11-23 · **Status:** Accepted
 
 ## Context
-A spend allowance was made available for OCI. Checked on 2026-11-24, the tenancy reports **zero
+A spend allowance was made available for OCI. Checked on 2026-11-23, the tenancy reports **zero
 promotional credit** (`CREDIT`, `ALLCREDIT` and `EXPIREDCREDIT` all empty), zero recorded cost and
 **no configured budget**, so the allowance is a payment-method-backed one rather than an Oracle
 credit grant.

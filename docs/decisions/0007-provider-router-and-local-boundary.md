@@ -1,6 +1,6 @@
 # ADR-0007 — A provider router, and local inference as a privacy boundary
 
-**Date:** 2026-11-24 · **Status:** Accepted
+**Date:** 2026-11-23 · **Status:** Accepted
 
 ## Context
 Until now there was one provider, so the chat route could hold a single `ChatProvider`. Adding

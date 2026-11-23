@@ -1,6 +1,6 @@
 # baseline-v1 — first calibration run
 
-**Run 2026-11-24.** Task set `baseline-v1` (14 tasks, machine-graded), temperature 0, one attempt per
+**Run 2026-11-23.** Task set `baseline-v1` (14 tasks, machine-graded), temperature 0, one attempt per
 task, 42 provider calls total. Reproducible from cassettes with `LYREN_CACHE_MODE=replay`.
 
 ## Results

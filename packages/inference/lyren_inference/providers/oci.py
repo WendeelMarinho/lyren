@@ -291,7 +291,7 @@ def _chunk_from_event(
     The event shape differs between the COHERE and GENERIC formats and is not fully documented, so
     the known shapes are tried in order and an unrecognised event is skipped rather than guessed at.
 
-    Observed on 2026-11-24 in sa-saopaulo-1: GENERIC emits deltas under
+    Observed on 2026-11-23 in sa-saopaulo-1: GENERIC emits deltas under
     `message.content[].text`, closing with an empty-text event carrying `finishReason` and then a
     `[DONE]` sentinel. COHERE emits deltas under `text` and closes with a summary event whose
     `text` is the **complete** answer. Neither reports `usage` on a stream.

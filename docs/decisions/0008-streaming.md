@@ -1,6 +1,6 @@
 # ADR-0008 — Streaming: what a started response can and cannot do
 
-**Date:** 2026-11-24 · **Status:** Accepted
+**Date:** 2026-11-23 · **Status:** Accepted
 
 ## Context
 Streaming changes error handling, cancellation and usage accounting at once, which is why it was
@@ -36,7 +36,7 @@ later replay of that prompt. Recording happens only when the generator completes
 `stream=true` against a provider that cannot stream is refused **before** the response starts, with
 a normal HTTP error, because that is knowable up front.
 
-OCI reports **no token counts on a stream** (verified 2026-11-24). So a streamed call is counted
+OCI reports **no token counts on a stream** (verified 2026-11-23). So a streamed call is counted
 against the daily and per-minute quotas, and its tokens are left unknown rather than recorded as
 zero. Per-principal token attribution is therefore incomplete for streamed traffic — stated here
 rather than papered over.

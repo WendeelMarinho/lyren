@@ -25,13 +25,20 @@ Read this before changing anything. It is deliberately short; the permanent deta
 ## Before you finish
 
 ```bash
-.venv/bin/ruff check . && .venv/bin/ruff format --check .
-.venv/bin/mypy packages apps
-.venv/bin/pytest
+./scripts/verify.sh
 ```
 
-All four must pass. Coverage floor is 80%. Then update
-`docs/IMPLEMENTATION_STATUS.md` — it is the single place that says what is real.
+It runs what CI runs, in the same order, plus a secret audit over tracked files **and history** —
+this repository is public, so a secret in a reverted commit is still published. Coverage floor is
+80%.
+
+**CI is not the gate right now.** This account's Actions minutes are exhausted, so pushes are
+verified on the machine and pushed by hand. Do not report a change as verified on the strength of a
+local run alone without saying so — and when minutes return, check the run instead of assuming it
+matches. Six commits in this repository were pushed while CI was red and nobody looked; the cause
+turned out to be the minute limit rather than the code, which is luck, not diligence.
+
+Then update `docs/IMPLEMENTATION_STATUS.md` — it is the single place that says what is real.
 
 ## Token discipline
 

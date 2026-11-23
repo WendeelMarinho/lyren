@@ -1,6 +1,6 @@
 # ADR-0010 — Direct password sign-up, restricted to declared addresses
 
-**Date:** 2026-11-24 · **Status:** Accepted · **Complements** [ADR-0009](0009-google-sign-in.md)
+**Date:** 2026-11-23 · **Status:** Accepted · **Complements** [ADR-0009](0009-google-sign-in.md)
 
 ## Context
 Google sign-in is built but its OAuth client does not exist yet, so people need a way in now.
