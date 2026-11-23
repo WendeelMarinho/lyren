@@ -74,3 +74,24 @@ Reclassification goes into `baseline-v3`. `baseline-v2` stays frozen with this r
 - `wcount-001` moved to the weakness probes.
 - A price book, so the cost axis — the one axis that does discriminate — can be reported in money
   rather than in tokens.
+
+## Addendum, 2026-11-24: a gap the task set cannot see
+
+While verifying streaming end to end, `cohere.command-a-03-2025` answered a Portuguese prompt
+("conte de 1 a 5") correctly and then continued **in Spanish**: *"¿Necesitas algo más? Puedo
+ayudarte con cualquier otra cosa que necesites."*
+
+For a platform used in Portuguese that is a real defect, and `baseline-v2` **cannot detect it**.
+Every `ptbr`-tagged task asks for a short answer — one word, one number, one date — and a
+single-token reply reveals nothing about which language the model would write prose in. The task set
+measured Portuguese *comprehension* and never Portuguese *production*.
+
+This is the same class of error as the `wcount-001` misdiagnosis: the measurement looked adequate
+until something outside it exposed what it was blind to.
+
+`baseline-v3` needs at least one prose task per language with a grader that checks the **response
+language**, not just the content. A cheap deterministic version: require a sentence of free prose and
+grade with `not_contains` against a list of Spanish-only function words, or score the proportion of
+tokens matching a Portuguese stopword list. Neither needs a model to judge a model.
+
+Recorded here rather than fixed in place: `baseline-v2` stays frozen with its numbers.

@@ -7,8 +7,11 @@ candidate list can cross provider boundaries, so a hosted model can fall back to
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+
 from lyren_core.errors import ProviderError
 from lyren_inference.ports import (
+    ChatChunk,
     ChatProvider,
     ChatRequest,
     ChatResponse,
@@ -16,6 +19,7 @@ from lyren_inference.ports import (
     EmbedRequest,
     EmbedResponse,
     ModelSpec,
+    StreamingChatProvider,
 )
 
 
@@ -44,6 +48,14 @@ class ProviderRouter:
 
     def chat(self, spec: ModelSpec, request: ChatRequest) -> ChatResponse:
         return self._provider_for(spec).chat(spec, request)
+
+    def stream_chat(self, spec: ModelSpec, request: ChatRequest) -> Iterator[ChatChunk]:
+        provider = self._provider_for(spec)
+        if not isinstance(provider, StreamingChatProvider):
+            raise ProviderError(
+                f"{spec.provider} does not support streaming", detail=f"model {spec.id}"
+            )
+        return provider.stream_chat(spec, request)
 
     def embed(self, spec: ModelSpec, request: EmbedRequest) -> EmbedResponse:
         provider = self._provider_for(spec)

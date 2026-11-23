@@ -141,7 +141,8 @@ def test_native_listing_exposes_why_a_model_is_unavailable():
     assert by_id["openai.gpt-oss-120b"]["availability"] == "not_found"
 
 
-def test_streaming_is_refused_instead_of_silently_ignored():
+def test_a_non_streaming_provider_refuses_a_streamed_request_up_front():
+    """Streaming now exists, but a provider that cannot do it says so before any byte is sent."""
     client, _, _ = build()
 
     response = client.post(
@@ -155,7 +156,7 @@ def test_streaming_is_refused_instead_of_silently_ignored():
     )
 
     assert response.status_code == 502
-    assert "streaming is not implemented" in response.json()["error"]["message"]
+    assert "does not support streaming" in response.json()["error"]["message"]
 
 
 def test_chat_returns_an_openai_shaped_completion_attributed_to_its_principal():

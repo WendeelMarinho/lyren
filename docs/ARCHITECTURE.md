@@ -17,8 +17,9 @@ Clients (OpenAI SDK, curl, CLI, web UI)
      /healthz /readyz /v1/models /v1/chat/completions   IMPLEMENTED
      /lyren/v1/models (native, with availability)       IMPLEMENTED
      /v1/embeddings (input types, 1536 dims)            IMPLEMENTED
-     streaming, /v1/responses, /v1/files,
-     /v1/agents/runs, /v1/memory/*                      NOT IMPLEMENTED
+     streaming SSE with cancellation                    IMPLEMENTED
+     /v1/responses, /v1/files, /v1/agents/runs,
+     /v1/memory/*                                       NOT IMPLEMENTED
         |
    Intelligence Runtime  (packages/inference, then packages/agents)
      ModelRegistry  -> pinned ids, alias policies, probe verdicts   IMPLEMENTED
@@ -77,5 +78,7 @@ No Kubernetes, Redis, Temporal, Prometheus or Grafana. Each would consume RAM th
 Observability starts as structured JSON logs with request ids; a metrics backend arrives only when
 there is something measured that logs cannot answer, and it will be hosted off-box.
 
-No streaming yet. SSE changes error handling, cancellation and usage accounting all at once, so it
-gets its own phase and its own tests rather than a partial implementation.
+Streaming is in, and it constrained three things rather than one: usage is recorded in `finally` so
+a disconnect still spends quota, a failure after the first byte becomes an error frame instead of an
+HTTP status, and alias fallback stops being possible once a byte is out.
+→ [ADR-0008](decisions/0008-streaming.md)

@@ -33,7 +33,15 @@ without the verification named.
 | Output tokens capped by the stricter of alias budget and principal quota | `tests/unit/test_api.py` |
 | The dev auth shortcut is refused outside a local environment | `tests/unit/test_api.py` |
 | `LYREN_API_KEY_HASHES` parses from the environment as comma-separated | `tests/unit/test_api.py` |
-| Streaming refused explicitly rather than ignored | `tests/unit/test_api.py` |
+| Streaming SSE: role frame, content deltas, finish frame, `[DONE]` | `tests/unit/test_streaming.py` |
+| A disconnected client still spends its quota | `tests/unit/test_streaming.py` |
+| A failure after the first byte becomes an error frame, not a status | `tests/unit/test_streaming.py` |
+| Alias fallback works before the first chunk and is refused after | `tests/unit/test_streaming.py` |
+| A streamed answer is recorded and replayed as one chunk | `tests/unit/test_streaming.py` |
+| A cancelled stream is not recorded | `tests/unit/test_streaming.py` |
+| A streamed and a non-streamed call share one cassette | `tests/unit/test_streaming.py` |
+| The COHERE summary event does not duplicate the answer | `tests/unit/test_oci_provider.py` |
+| A non-streaming provider refuses a streamed request up front | `tests/unit/test_api.py` |
 | Alias resolution, ordering, fallback, probe recording | `test_api.py`, `test_registry.py` |
 | Per-alias output-token cap overriding a larger client request | `tests/unit/test_api.py` |
 | Record/replay cache: key stability, pin invalidation, four modes | `tests/unit/test_cache.py` |
@@ -58,7 +66,7 @@ without the verification named.
 | Provider 401/403 reported as a credential failure, not a model failure | `tests/unit/test_oci_provider.py` |
 
 Gates: `ruff check`, `ruff format --check`, `mypy --strict` over `packages` and `apps`, and
-`pytest` — **138 tests passing, 87% coverage** (floor 80%, enforced in CI).
+`pytest` — **158 tests passing, 87% coverage** (floor 80%, enforced in CI).
 
 ## Implemented, hand-checked
 
@@ -66,6 +74,7 @@ Gates: `ruff check`, `ruff format --check`, `mypy --strict` over `packages` and 
 |---|---|
 | `OCIGenerativeAIProvider` chat, GENERIC and COHERE formats | Live calls on 2026-11-23 returned completions from the three callable models |
 | `OCIGenerativeAIProvider.embed` | Live call on 2026-11-24 returned 1536-dim vectors with correct semantic ordering |
+| Streamed chat, both formats, end to end through the API | Live on 2026-11-24: 31 frames, quota counted, replay served from the cassette in 3 frames |
 | Security-token, API-key and instance-principal auth paths | Security-token path exercised; the other two are written but not run |
 
 ## Planned
@@ -125,5 +134,8 @@ in-process call cap. Infrastructure lives in a separate private repository, `lyr
    tasks per model. Cost and latency separate cleanly at this size; quality does not, which is why
    the router uses a quality *floor* rather than a ranking.
    → [baseline-v2 results](research/baseline-v2-results.md)
-6. **No per-token price is known**, so every run reports `cost=UNKNOWN` and spend is bounded by call
+6. **Token attribution is incomplete for streamed traffic.** OCI reports no token counts on a
+   stream, so a streamed call is counted against the quotas but its tokens are recorded as unknown
+   rather than zero.
+7. **No per-token price is known**, so every run reports `cost=UNKNOWN` and spend is bounded by call
    count rather than by money.

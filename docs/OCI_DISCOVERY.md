@@ -74,6 +74,38 @@ Because the spaces are asymmetric, **absolute cosine similarity is not calibrate
 ranking. Verified on 2026-11-24: a correct match scored ~0.29 and an unrelated one ~0.11, so the
 ordering is clear while neither number resembles a "90% match".
 
+## Streaming: the two formats end differently, and one of them repeats itself
+
+Verified against the live service on 2026-11-24. Both formats stream over the SDK's `events()`
+iterator with `is_stream=True` on the chat request, and both pad each event with a `pad` field of
+filler characters.
+
+**GENERIC** emits deltas under `message.content[].text`, closes with an empty-text event carrying
+`finishReason`, then sends a `[DONE]` sentinel:
+
+```
+{"index":0,"message":{"role":"ASSISTANT","content":[{"type":"TEXT","text":"po"}]},"pad":"aaa"}
+{"message":{"role":"ASSISTANT","content":[{"type":"TEXT","text":""}]},"finishReason":"stop"}
+[DONE]
+```
+
+**COHERE** emits deltas under `text` — and then closes with a summary event whose `text` is the
+**entire answer**, not a delta, alongside `chatHistory` and `finishReason`. There is no `[DONE]`:
+
+```
+{"apiFormat":"COHERE","text":"Pong","pad":"a"}
+{"apiFormat":"COHERE","text":".","pad":"aa"}
+{"apiFormat":"COHERE","text":"Pong.","chatHistory":[...],"finishReason":"COMPLETE"}
+```
+
+Concatenating every `text` therefore yields `"Pong.Pong."`. The fix is to drop the summary's text
+once any delta has been emitted, and to keep it when none has — which covers an answer short enough
+to arrive as a single event. This is the kind of bug that produces plausible-looking duplicated
+output rather than an error, so it is regression-tested.
+
+**Neither format reports `usage` on a stream.** Token counts are simply unavailable for streamed
+calls, so anything that meters tokens has to treat them as unknown rather than zero.
+
 ## Two request formats, one endpoint
 
 Cohere models take `apiFormat: "COHERE"` (a single `message`, `chat_history`, `preamble_override`)

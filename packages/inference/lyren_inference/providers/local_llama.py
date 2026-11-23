@@ -11,6 +11,8 @@ it has and silently attributing a benchmark to the wrong model is worse than ref
 
 from __future__ import annotations
 
+import json
+from collections.abc import Iterator
 from typing import Any
 
 import httpx
@@ -18,6 +20,7 @@ import httpx
 from lyren_core.errors import ProviderError
 from lyren_inference.ports import (
     Availability,
+    ChatChunk,
     ChatRequest,
     ChatResponse,
     ModelSpec,
@@ -52,7 +55,8 @@ class LocalLlamaProvider:
             return Availability.NOT_FOUND
         return Availability.VERIFIED
 
-    def chat(self, spec: ModelSpec, request: ChatRequest) -> ChatResponse:
+    @staticmethod
+    def _payload(request: ChatRequest) -> dict[str, Any]:
         messages = []
         for message in request.messages:
             role = _ROLES.get(message.role)
@@ -68,6 +72,10 @@ class LocalLlamaProvider:
         }
         if request.stop:
             payload["stop"] = list(request.stop)
+        return payload
+
+    def chat(self, spec: ModelSpec, request: ChatRequest) -> ChatResponse:
+        payload = self._payload(request)
 
         try:
             response = self._client.post(f"{self._base_url}/v1/chat/completions", json=payload)
@@ -89,6 +97,30 @@ class LocalLlamaProvider:
 
         return self._to_response(spec, response.json())
 
+    def stream_chat(self, spec: ModelSpec, request: ChatRequest) -> Iterator[ChatChunk]:
+        payload = self._payload(request)
+        payload["stream"] = True
+        try:
+            with self._client.stream(
+                "POST", f"{self._base_url}/v1/chat/completions", json=payload
+            ) as response:
+                if response.status_code >= 400:
+                    response.read()
+                    raise ProviderError(
+                        f"the local llama.cpp server returned {response.status_code}",
+                        detail=response.text[:200],
+                    )
+                for line in response.iter_lines():
+                    chunk = _chunk_from_sse_line(line)
+                    if chunk is _DONE:
+                        return
+                    if chunk is not None:
+                        yield chunk
+        except httpx.HTTPError as exc:
+            raise ProviderError(
+                f"the local llama.cpp server at {self._base_url} is unreachable", detail=str(exc)
+            ) from exc
+
     @staticmethod
     def _to_response(spec: ModelSpec, body: dict[str, Any]) -> ChatResponse:
         choices = body.get("choices") or []
@@ -105,3 +137,28 @@ class LocalLlamaProvider:
                 completion_tokens=usage.get("completion_tokens"),
             ),
         )
+
+
+_DONE = ChatChunk(text="\x00done")
+"""Sentinel: the stream's terminator is distinct from an empty delta."""
+
+
+def _chunk_from_sse_line(line: str) -> ChatChunk | None:
+    if not line.startswith("data:"):
+        return None
+    payload = line[5:].strip()
+    if payload == "[DONE]":
+        return _DONE
+    try:
+        body = json.loads(payload)
+    except json.JSONDecodeError:
+        return None
+    choices = body.get("choices") or []
+    if not choices:
+        return None
+    delta = choices[0].get("delta") or {}
+    text = str(delta.get("content") or "")
+    finish_reason = choices[0].get("finish_reason")
+    if not text and finish_reason is None:
+        return None
+    return ChatChunk(text=text, finish_reason=finish_reason)

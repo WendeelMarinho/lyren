@@ -124,3 +124,55 @@ def test_an_unsupported_role_is_refused_instead_of_dropped():
 
     with pytest.raises(ProviderError, match="not supported"):
         provider.chat(SPEC, tool_request)
+
+
+def _sse(lines):
+    def handler(request):
+        return httpx.Response(
+            200,
+            content="".join(f"data: {line}\n\n" for line in lines),
+            headers={"content-type": "text/event-stream"},
+        )
+
+    return handler
+
+
+def test_streaming_reassembles_deltas_and_reports_the_finish_reason():
+    lines = [
+        '{"choices":[{"delta":{"content":"po"},"finish_reason":null}]}',
+        '{"choices":[{"delta":{"content":"ng"},"finish_reason":null}]}',
+        '{"choices":[{"delta":{},"finish_reason":"stop"}]}',
+        "[DONE]",
+    ]
+
+    chunks = list(provider_with(_sse(lines)).stream_chat(SPEC, REQUEST))
+
+    assert "".join(c.text for c in chunks) == "pong"
+    assert [c.finish_reason for c in chunks if c.finish_reason] == ["stop"]
+
+
+def test_streaming_stops_at_the_done_sentinel():
+    lines = [
+        '{"choices":[{"delta":{"content":"a"}}]}',
+        "[DONE]",
+        '{"choices":[{"delta":{"content":"b"}}]}',
+    ]
+
+    chunks = list(provider_with(_sse(lines)).stream_chat(SPEC, REQUEST))
+
+    assert "".join(c.text for c in chunks) == "a"
+
+
+def test_streaming_skips_an_unparseable_line():
+    lines = ["not json", '{"choices":[{"delta":{"content":"ok"}}]}', "[DONE]"]
+
+    chunks = list(provider_with(_sse(lines)).stream_chat(SPEC, REQUEST))
+
+    assert "".join(c.text for c in chunks) == "ok"
+
+
+def test_a_streaming_error_status_is_reported_before_any_chunk():
+    provider = provider_with(lambda request: httpx.Response(500, text="boom"))
+
+    with pytest.raises(ProviderError, match="returned 500"):
+        list(provider.stream_chat(SPEC, REQUEST))

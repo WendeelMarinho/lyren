@@ -40,7 +40,13 @@ x86 development machine answers nothing about 2 ARM OCPUs.
 `input_type` because indexing a document as a query degrades recall silently. Embeddings are cached
 like chat, so a retrieval benchmark can replay its corpus instead of re-embedding it.
 
-**Next:** streaming SSE with cancellation, then the first web UI on assistant-ui.
+**Done:** streaming SSE with cancellation, verified end to end against the live service.
+→ [ADR-0008](decisions/0008-streaming.md)
+
+**Next:** the first web UI on assistant-ui. Open question before it starts: whether the Next.js app
+lives in this monorepo as `apps/web` or in its own repository, and how browser sessions authenticate
+— a session is not a bearer API key, and with named principals that is a product decision rather
+than a coding one.
 
 The order changed on 2026-11-24. Local inference was first only because it was free; with spend
 authorised, the baseline measurement comes first — it is what makes every later component

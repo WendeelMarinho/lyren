@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from datetime import date
 from enum import StrEnum
@@ -125,11 +126,31 @@ class EmbedResponse:
         return len(self.vectors[0]) if self.vectors else None
 
 
+@dataclass(frozen=True, slots=True)
+class ChatChunk:
+    """One increment of a streamed answer.
+
+    `usage` arrives on the last chunk when the provider reports it at all, so a consumer must not
+    assume it is present on every chunk.
+    """
+
+    text: str = ""
+    finish_reason: str | None = None
+    usage: Usage | None = None
+
+
 @runtime_checkable
 class ChatProvider(Protocol):
     name: str
 
     def chat(self, spec: ModelSpec, request: ChatRequest) -> ChatResponse: ...
+
+
+@runtime_checkable
+class StreamingChatProvider(Protocol):
+    name: str
+
+    def stream_chat(self, spec: ModelSpec, request: ChatRequest) -> Iterator[ChatChunk]: ...
 
 
 @runtime_checkable

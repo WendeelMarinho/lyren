@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +15,7 @@ from lyren_core.errors import (
 from lyren_core.settings import OCIAuthMode, Settings
 from lyren_inference.ports import (
     ApiFormat,
+    ChatChunk,
     ChatRequest,
     ChatResponse,
     EmbedRequest,
@@ -148,6 +151,61 @@ class OCIGenerativeAIProvider:
             stop_sequences=list(request.stop) or None,
         )
 
+    def stream_chat(self, spec: ModelSpec, request: ChatRequest) -> Iterator[ChatChunk]:
+        import oci
+        from oci.generative_ai_inference import models as genai
+
+        client = self._ensure_client()
+        chat_request = (
+            self._cohere_request(genai, request)
+            if spec.api_format is ApiFormat.COHERE
+            else self._generic_request(genai, request)
+        )
+        chat_request.is_stream = True
+        details = genai.ChatDetails(
+            compartment_id=self._compartment_id,
+            serving_mode=genai.OnDemandServingMode(model_id=spec.id),
+            chat_request=chat_request,
+        )
+
+        try:
+            raw = client.chat(details)
+        except oci.exceptions.ServiceError as exc:
+            raise self._translate(spec, exc) from exc
+
+        yield from self._iter_events(spec, raw)
+
+    @staticmethod
+    def _iter_events(spec: ModelSpec, raw: Any) -> Iterator[ChatChunk]:
+        """Turns provider events into deltas.
+
+        Stateful on purpose. The COHERE format ends with a summary event whose `text` is the whole
+        answer rather than a delta, so concatenating every `text` would duplicate the reply. The
+        summary's text is dropped once any delta has been emitted, and kept when none has — which
+        covers a stream short enough to arrive as one event.
+        """
+        emitted_text = False
+        for event in raw.data.events():
+            payload = getattr(event, "data", None)
+            if not payload:
+                continue
+            if payload.strip() == "[DONE]":
+                return
+            try:
+                body = json.loads(payload)
+            except json.JSONDecodeError:
+                continue
+
+            suppress = (
+                spec.api_format is ApiFormat.COHERE and _is_summary_event(body) and emitted_text
+            )
+            chunk = _chunk_from_event(spec, body, suppress_text=suppress)
+            if chunk is None:
+                continue
+            if chunk.text:
+                emitted_text = True
+            yield chunk
+
     def embed(self, spec: ModelSpec, request: EmbedRequest) -> EmbedResponse:
         import oci
         from oci.generative_ai_inference import models as genai
@@ -219,6 +277,59 @@ class OCIGenerativeAIProvider:
                 completion_tokens=getattr(raw_usage, "completion_tokens", None),
             ),
         )
+
+
+def _is_summary_event(body: dict[str, Any]) -> bool:
+    return "finishReason" in body or "chatHistory" in body
+
+
+def _chunk_from_event(
+    spec: ModelSpec, body: dict[str, Any], *, suppress_text: bool = False
+) -> ChatChunk | None:
+    """Extracts a delta from one stream event.
+
+    The event shape differs between the COHERE and GENERIC formats and is not fully documented, so
+    the known shapes are tried in order and an unrecognised event is skipped rather than guessed at.
+
+    Observed on 2026-11-24 in sa-saopaulo-1: GENERIC emits deltas under
+    `message.content[].text`, closing with an empty-text event carrying `finishReason` and then a
+    `[DONE]` sentinel. COHERE emits deltas under `text` and closes with a summary event whose
+    `text` is the **complete** answer. Neither reports `usage` on a stream.
+    """
+    finish_reason = body.get("finishReason") or body.get("finish_reason")
+    raw_usage = body.get("usage")
+    usage = (
+        Usage(
+            prompt_tokens=raw_usage.get("promptTokens") or raw_usage.get("prompt_tokens"),
+            completion_tokens=raw_usage.get("completionTokens")
+            or raw_usage.get("completion_tokens"),
+        )
+        if isinstance(raw_usage, dict)
+        else None
+    )
+
+    text = ""
+    if spec.api_format is ApiFormat.COHERE:
+        text = "" if suppress_text else str(body.get("text") or "")
+    else:
+        message_body = body.get("message") or {}
+        parts = message_body.get("content") or []
+        text = "".join(str(part.get("text") or "") for part in parts if isinstance(part, dict))
+        if not text:
+            for choice in body.get("choices") or []:
+                delta = choice.get("delta") or choice.get("message") or {}
+                content = delta.get("content")
+                if isinstance(content, str):
+                    text += content
+                elif isinstance(content, list):
+                    text += "".join(
+                        str(p.get("text") or "") for p in content if isinstance(p, dict)
+                    )
+                finish_reason = finish_reason or choice.get("finishReason")
+
+    if not text and finish_reason is None and usage is None:
+        return None
+    return ChatChunk(text=text, finish_reason=finish_reason, usage=usage)
 
 
 def message(role: Role, content: str) -> Message:

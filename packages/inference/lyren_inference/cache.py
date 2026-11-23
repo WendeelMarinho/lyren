@@ -10,12 +10,14 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import json
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
 from lyren_core.errors import CacheMissError, ProviderError
 from lyren_core.settings import CacheMode
 from lyren_inference.ports import (
+    ChatChunk,
     ChatProvider,
     ChatRequest,
     ChatResponse,
@@ -23,6 +25,7 @@ from lyren_inference.ports import (
     EmbedRequest,
     EmbedResponse,
     ModelSpec,
+    StreamingChatProvider,
     Usage,
 )
 
@@ -149,6 +152,57 @@ class CachingProvider:
         response = self._inner.chat(spec, request)
         self._store.put(key, response)
         return response
+
+    def stream_chat(self, spec: ModelSpec, request: ChatRequest) -> Iterator[ChatChunk]:
+        """Streams, then records the assembled answer.
+
+        A replayed stream arrives as **one chunk holding the whole text**: a cassette preserves
+        content, not token timing. That is the property the experiments need, and pretending to
+        reproduce arrival times would be a fiction.
+
+        A stream that is cancelled part-way is **not** recorded. Storing a truncated answer would
+        poison every later replay of that prompt.
+        """
+        inner = self._inner
+        if not isinstance(inner, StreamingChatProvider):
+            raise ProviderError(f"{inner.name} does not support streaming")
+
+        if self._mode is CacheMode.OFF:
+            yield from inner.stream_chat(spec, request)
+            return
+
+        key = cache_key(spec, request)
+
+        if self._mode is not CacheMode.RECORD:
+            hit = self._store.get(key)
+            if hit is not None:
+                yield ChatChunk(text=hit.text, finish_reason=hit.finish_reason, usage=hit.usage)
+                return
+            if self._mode is CacheMode.REPLAY:
+                raise CacheMissError(f"no cassette for {spec.id} (key {key[:12]})")
+
+        parts: list[str] = []
+        finish_reason: str | None = None
+        usage: Usage | None = None
+        completed = False
+        try:
+            for chunk in inner.stream_chat(spec, request):
+                parts.append(chunk.text)
+                finish_reason = chunk.finish_reason or finish_reason
+                usage = chunk.usage or usage
+                yield chunk
+            completed = True
+        finally:
+            if completed:
+                self._store.put(
+                    key,
+                    ChatResponse(
+                        model_id=spec.id,
+                        text="".join(parts),
+                        finish_reason=finish_reason or "stop",
+                        usage=usage or Usage(),
+                    ),
+                )
 
     def embed(self, spec: ModelSpec, request: EmbedRequest) -> EmbedResponse:
         inner = self._inner
