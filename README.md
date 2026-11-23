@@ -95,6 +95,8 @@ packages/inference  model registry, provider ports, record/replay cache, OCI pro
 packages/evaluation frozen task sets, graders, benchmark runner, spend guards
 tests/unit          offline tests — no network, no credentials
 infrastructure/     Dockerfile (arm64 target), compose, CI
+                    OCI Terraform, host bootstrap and the tenancy inventory live in a
+                    separate private repository, lyren-infra
 docs/               architecture, discovery, reuse matrix, ADRs
 ```
 

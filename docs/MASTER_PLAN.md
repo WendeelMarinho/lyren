@@ -30,6 +30,14 @@ to earn its place. → [ROADMAP.md](ROADMAP.md)
 Record/replay of model calls is part of that foundation: without it no experiment is reproducible and
 no CI is affordable. → [ADR-0004](decisions/0004-record-replay-cache.md)
 
+## Repositories
+
+This repository holds the application and is public. OCI Terraform, host bootstrap, operational
+scripts and the tenancy inventory live in a separate **private** repository, `lyren-infra`: those
+describe the deployment — OCIDs, network layout, IAM policies, real quota values — and publishing
+them would hand over a map. `Dockerfile.api` and the development compose file stay here, with the
+source they build.
+
 ## Architecture
 Modular monolith, ports at the boundaries, one durable runtime.
 → [ARCHITECTURE.md](ARCHITECTURE.md), [ADR-0001](decisions/0001-modular-monolith.md),

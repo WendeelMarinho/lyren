@@ -1,106 +1,89 @@
-# OCI Discovery
+# OCI Generative AI — findings
 
-Read-only audit of the target tenancy. **Probed 2026-11-23.** Every line below was obtained from the
-OCI API or from a real inference call — nothing here is inferred from documentation or marketing
-pages. Do not re-run this audit to re-derive it; re-run it to detect drift.
+What we learned auditing OCI Generative AI in **`sa-saopaulo-1`**, probed by real calls on
+**2026-11-23/24**. Written to be reusable by anyone on OCI.
 
-No OCIDs, tokens, keys or wallets are recorded in this file.
+The tenancy's own identifiers, service limits and quota values are **not** here. They live in the
+private infrastructure repository (`lyren-infra`, `docs/TENANCY_INVENTORY.md`), because publishing a
+deployment map is a different thing from publishing findings.
 
-## Tenancy
+## The catalog does not tell you what you can call
 
-| Property | Value |
-|---|---|
-| Tenancy name | `wendeel` |
-| Home region | `sa-saopaulo-1` (GRU) |
-| Subscribed regions | `sa-saopaulo-1` only |
-| Availability domains | **1** (`...SA-SAOPAULO-1-AD-1`) |
-| Compartments | root only — no sub-compartments |
-| Object Storage namespace | present |
-| Existing resources | **none** — no compute, no database, no VCN, no bucket |
-| Cost, Nov 2026 | zero |
-| Credits (CREDIT / ALLCREDIT / EXPIREDCREDIT) | **empty** — no promotional credit, active or expired |
+This is the finding that shaped the code. The region's model catalog returned 41 models, of which 8
+chat entries looked live by their metadata. **Three answered a real request.**
 
-**Single AD** means no cross-AD high availability, and Ampere A1 capacity in one AD is where
-*out of host capacity* errors show up.
+Two traps explain the gap:
 
-## Account type — UNRESOLVED
+1. **Duplicate display-names.** The same model id appears more than once, and the entry whose
+   `time-on-demand-retired` is `null` can be the **dedicated-cluster** variant rather than an
+   on-demand offer. Filtering on "not retired" therefore selects models that 404 when called.
+2. **`time-on-demand-retired` set to epoch zero** (`1970-01-01`) means *not served on demand*. It
+   reads like "never retired".
 
-The operator reports "free tier". The API cannot distinguish an **Always Free** tenancy from a
-**pay-as-you-go** one: there is no account-type field, and the absence of credit records only rules
-out an active trial. Service limits do not settle it either, because the Always Free A1 allowance is
-expressed in OCPU-hours per month rather than as a service limit.
+So availability must be established by a probe and recorded, never inferred from catalog metadata.
+See [ADR-0003](decisions/0003-empirical-model-availability.md) and
+`packages/inference/lyren_inference/registry.py`.
 
-**Consequence, and it is the governing assumption of this project:** size everything for the Always
-Free envelope (~2 OCPU ARM / 12 GB RAM running 24/7). A limit is a ceiling, not a free allowance.
+## Three failure modes that need different handling
 
-To resolve: Console → Billing & Cost Management.
+A call against an unusable model fails in three distinct ways, and collapsing them into one error
+loses the only actionable information:
 
-**Re-checked 2026-11-24**, after a $300 allowance was reported as available: credits are still empty
-across `CREDIT`, `ALLCREDIT` and `EXPIREDCREDIT`, recorded cost is still zero, and no OCI budget is
-configured. So the $300 reads as a payment-method-backed allowance, not an Oracle credit grant —
-which means **nothing stops billing at $300**. The spend cap is enforced in the application instead;
-see [ADR-0005](decisions/0005-spend-control-in-process.md). The probe calls of 2026-11-23 had still
-registered no cost 24h later, which is consistent either with them being free or with usage lag.
-
-## Compute limits
-
-| Limit | Value | Scope |
+| Response | Meaning | What to do |
 |---|---|---|
-| `standard-a1-core-regional-count` | **16** | region — the binding cap |
-| `standard-a1-memory-regional-count` | **96 GB** | region — the binding cap |
-| `standard-a1-core-count` / `memory-count` | 41 / 277 GB | AD |
-| `standard-e2-micro-core-count` | 2 (0 used) | AD — the Always Free AMD micro shapes |
-| `standard-e3` / `e4` / `e5` core count | 16 / 16 / 13 | AD |
-| **every GPU shape** | **0** | AD |
-| Block storage, total | 30,720 GB ceiling; 200 GB on the free line | region |
+| **404** `Entity with key <model> not found` | not served on demand here | stop asking for this model |
+| **429** `... tenancy limit <name> is set to 0` | the model exists; your quota for it is zero | request a limit increase |
+| **401 / 403** | your credentials were rejected | fix auth — never a model problem |
 
-**Zero GPU quota across every shape.** No training and no fine-tuning happens in this tenancy.
+The third one matters more than it looks. An expired credential fails *every* task in a benchmark,
+and a harness that reports that as a score of zero has published a credential problem as a model
+result. Lyren maps 401/403 to a distinct `ProviderAuthError` and aborts a run that keeps hitting the
+same error rather than completing it. See
+[ADR-0005](decisions/0005-spend-control-in-process.md) and
+[baseline-v2 results](research/baseline-v2-results.md).
 
-## Generative AI (`ai-generative`)
+## Models callable on demand in this region
 
-Only two quotas are non-zero:
+Established by real calls, not by the catalog. Availability also depends on per-model quotas, which
+vary by tenancy, so treat this as a starting point for your own probe:
 
-| Quota | Value |
+| Capability | Model |
 |---|---|
-| `max-on-demand-chat-request-per-minute-count` | **500** |
-| `max-on-demand-embed-request-per-minute-count` | **1000** |
+| Chat | `cohere.command-a-03-2025` |
+| Chat | `meta.llama-3.3-70b-instruct` |
+| Chat | `meta.llama-4-scout-17b-16e-instruct` (MoE, 17B active) |
+| Embeddings | `cohere.embed-v4.0` — **1536 dimensions** |
+| Rerank | `cohere.rerank-v4.0-fast` |
 
-Everything else is zero, including: all Gemini variants, all Grok/xAI variants, **every
-`dedicated-unit-*`** (so no fine-tuning and no dedicated serving), `imported-model-count`,
-`sandbox-*`, `warmpool-*`, `routing-profile-count`, `private-endpoint-count`.
+Returned 404: `openai.gpt-oss-120b`, `openai.gpt-oss-20b`, `cohere.command-r-08-2024`,
+`meta.llama-3.1-70b-instruct`, `meta.llama-3-70b-instruct`. The `gpt-oss` models are listed as
+`ACTIVE` in the catalog and are documented as regionally available, yet are not servable on demand —
+the epoch-zero retirement field was the only signal.
 
-### Models — verdicts from real calls, not from the catalog
+Gemini and Grok families were reachable only where the per-model quota was non-zero, which it was
+not for us.
 
-The catalog returned 41 models, of which 8 chat entries looked live. **Three answer.**
+## Two request formats, one endpoint
 
-| Model | Capability | Verdict |
-|---|---|---|
-| `cohere.command-a-03-2025` | chat | **works** |
-| `meta.llama-3.3-70b-instruct` | chat | **works** |
-| `meta.llama-4-scout-17b-16e-instruct` | chat | **works** (MoE, 17B active) |
-| `cohere.embed-v4.0` | embeddings | **works**, 1536 dimensions |
-| `cohere.rerank-v4.0-fast` | rerank | **works** |
-| `google.gemini-2.5-flash` | chat | 429 — `gemini-2-5-flash-requests-per-minute-count` is 0 |
-| `openai.gpt-oss-120b`, `openai.gpt-oss-20b` | chat | **404 not found** |
-| `cohere.command-r-08-2024` | chat | **404 not found** |
-| `meta.llama-3.1-70b-instruct`, `meta.llama-3-70b-instruct` | chat | **404 not found** |
+Cohere models take `apiFormat: "COHERE"` (a single `message`, `chat_history`, `preamble_override`)
+while Meta and Google models take `apiFormat: "GENERIC"` (OpenAI-like `messages` with typed content
+parts). One client, one auth mechanism, two request shapes — a provider abstraction has to normalise
+this. See `packages/inference/lyren_inference/providers/oci.py`.
 
-Why the catalog misleads, and this is a design input rather than a footnote:
+## Costs are opaque
 
-- Display-names are **duplicated**, and the entry whose `time-on-demand-retired` is null is the
-  dedicated-cluster variant — not an on-demand offer.
-- `time-on-demand-retired` set to **epoch zero** (`1970-01-01`) means not served on demand. It reads
-  like "never retired".
+Per-token prices are **not exposed through the API**. The usage and cost endpoints also lag by hours,
+so a run cannot be priced immediately after it happens. Consequences for anyone building on this:
 
-Hence `packages/inference/lyren_inference/registry.py` stores an `Availability` verdict per model,
-pins versions, and records probe results at runtime. Never hardcode a model list from the catalog.
+- Do not convert tokens to money from a guessed rate. Lyren's `PriceBook` returns `None` for an
+  unpriced model and the ledger reports the total as incomplete rather than understating it.
+- A **call-count cap** is enforceable with no price knowledge at all, which makes it the only usable
+  spend guard before the first invoice. A money cap needs a price, and with the price missing the
+  guard should fail closed.
+- An OCI budget **only alerts**. It does not stop spending.
 
 ## Not verified
 
-- Max context window per model: not exposed by the API and not measured. Left `None` in the registry
-  rather than guessed.
-- Per-token prices, and therefore whether the probe calls above billed. Usage data lags by hours.
-- Autonomous AI Database Always Free availability: not probed.
-- IAM dynamic groups, policies, VCN and NSG capability: not probed.
-- `VM.Standard.A1.Flex` actual provisioning capacity in this single AD.
-- The OpenAI-compatible endpoint Oracle documents: not probed.
+Max context window per model (not exposed by the API, not measured — left `None` in the registry
+rather than guessed), per-token prices, Autonomous AI Database availability, and the
+OpenAI-compatible endpoint Oracle documents.

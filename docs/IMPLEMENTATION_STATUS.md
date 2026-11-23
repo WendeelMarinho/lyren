@@ -64,7 +64,7 @@ is currently the contract), `TEST_STRATEGY.md`.
 |---|---|
 | Fine-tuning, LoRA/QLoRA, any training | zero GPU quota; every `dedicated-unit-*` is 0 |
 | Dedicated model serving, imported models | quota 0 |
-| Gemini and Grok model families | per-model request quotas are 0 |
+| Gemini and Grok model families | per-model request quotas are 0 in this tenancy |
 | `openai.gpt-oss-120b` / `20b` | catalog-listed, 404 on call |
 | Cross-AD high availability | one availability domain |
 
@@ -72,16 +72,18 @@ is currently the contract), `TEST_STRATEGY.md`.
 
 Creating any OCI resource — **including the protective OCI budget with alert rules**, which is free
 but is still a resource; exposing the API to the internet; requesting a service-limit increase (now
-worth doing for Gemini and Grok, whose per-model quotas are 0); making this repository public.
+worth doing for Gemini and Grok, whose per-model quotas are zero here); **making this repository
+public**.
 
 Spending on OCI Generative AI on-demand calls is **authorised** as of 2026-11-24, bounded by the
-in-process call cap.
+in-process call cap. Infrastructure lives in a separate private repository, `lyren-infra`.
 
 ## Open questions
 
-1. **Always Free or pay-as-you-go?** Unresolved via API. A $300 allowance was reported on
-   2026-11-24, but no promotional credit appears in `CREDIT`/`ALLCREDIT`/`EXPIREDCREDIT`, so it reads
-   as pay-as-you-go headroom with **no automatic stop**. Console → Billing & Cost Management settles it.
+1. **Always Free or pay-as-you-go?** Unresolved via API: no promotional credit appears in
+   `CREDIT`/`ALLCREDIT`/`EXPIREDCREDIT`, so the available allowance reads as pay-as-you-go headroom
+   with **no automatic stop**. Console → Billing & Cost Management settles it. Tenancy specifics are
+   in the private `lyren-infra` repository.
 2. **Per-token price of each callable model.** Not exposed by the API, not measured. Until an
    invoice exists the money cap cannot be enforced and the harness reports `cost=UNKNOWN`. The first
    real benchmark run is the calibration that fixes this.
