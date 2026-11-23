@@ -17,7 +17,7 @@ from lyren_core.settings import CacheMode, Settings
 from lyren_eval.budget import BudgetGuard
 from lyren_eval.pricing import PriceBook
 from lyren_eval.runner import RunReport, run_taskset
-from lyren_eval.tasks import TaskSet
+from lyren_eval.tasks import Scoring, TaskSet
 from lyren_inference.cache import CachingChatProvider, CassetteStore
 from lyren_inference.providers.oci import OCIGenerativeAIProvider
 from lyren_inference.registry import ModelRegistry
@@ -26,7 +26,10 @@ from lyren_inference.registry import ModelRegistry
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="lyren_eval", description=__doc__)
     parser.add_argument("--model", default="lyren/fast", help="alias or concrete model id")
-    parser.add_argument("--taskset", default="baseline-v1")
+    parser.add_argument("--taskset", default="baseline-v2")
+    parser.add_argument(
+        "--attempts", type=int, default=1, help="repeats per task, to expose variance"
+    )
     parser.add_argument(
         "--max-calls", type=int, default=50, help="hard call cap; 0 disables it deliberately"
     )
@@ -65,29 +68,52 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     print(
-        f"taskset={taskset.name} tasks={len(taskset)} model={spec.id} cache={mode.value} "
+        f"taskset={taskset.name} tasks={len(taskset)} "
+        f"(discriminating {len(taskset.discriminating())}) attempts={args.attempts} "
+        f"model={spec.id} cache={mode.value} "
         f"call_cap={args.max_calls or 'none'} spend_cap={args.max_spend or 'none'}"
     )
-    report = run_taskset(guard, spec, taskset, ledger=guard.ledger)
+    report = run_taskset(guard, spec, taskset, attempts=args.attempts, ledger=guard.ledger)
     _print(report)
+    if report.aborted:
+        return 3
     return 0 if report.errored == 0 else 1
 
 
 def _print(report: RunReport) -> None:
     for trial in report.trials:
-        mark = "PASS" if trial.passed else "FAIL"
-        suffix = f" error={trial.error}" if trial.error else f" -> {trial.answer.strip()[:60]!r}"
-        print(f"  {mark}  {trial.task_id:<12} {trial.latency_ms:7.0f}ms{suffix}")
+        if trial.passed:
+            continue
+        where = (
+            f"{trial.task_id}#{trial.attempt}" if report.attempts_per_task > 1 else trial.task_id
+        )
+        detail = trial.error or repr(trial.answer.strip()[:60])
+        print(f"  FAIL  {where:<22} {trial.latency_ms:7.0f}ms  {detail}")
 
-    ledger = report.ledger
+    if report.aborted:
+        print(f"\nRUN ABORTED: {report.abort_reason}")
+        print("no score is reported — this describes the run, not the model")
+        print(f"trials attempted={len(report.trials)} errored={report.errored}")
+        return
+
     print(
-        f"\n{report.passed}/{report.attempted} passed "
-        f"({report.success_rate:.0%}), {report.errored} errored"
+        f"\nscore(discriminating)={report.score():.1%}  "
+        f"score(weakness_probes)={report.score(scoring=Scoring.WEAKNESS_PROBE):.1%}  "
+        f"errored={report.errored}"
     )
+
+    unstable = report.unstable_tasks()
+    if unstable:
+        detail = ", ".join(f"{o.task_id} {o.passes}/{o.attempts}" for o in unstable)
+        print(f"unstable across attempts: {detail}")
+    elif report.attempts_per_task > 1:
+        print("unstable across attempts: none")
+
     print(
         f"latency p50={report.latency_percentile(50):.0f}ms "
         f"p95={report.latency_percentile(95):.0f}ms"
     )
+    ledger = report.ledger
     print(
         f"calls={ledger.calls} (cached {ledger.cached_calls}) "
         f"tokens in={ledger.prompt_tokens} out={ledger.completion_tokens}"
@@ -98,9 +124,6 @@ def _print(report: RunReport) -> None:
         if cost is not None
         else f"cost=UNKNOWN ({ledger.unpriced_calls} calls without a configured price)"
     )
-
-    for tag, (attempted, passed) in sorted(report.by_tag().items()):
-        print(f"  {tag:<12} {passed}/{attempted}")
 
 
 if __name__ == "__main__":

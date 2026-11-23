@@ -1,6 +1,6 @@
 # Implementation Status
 
-Updated **2026-11-24**. The one place that says what is real. Five states, and nothing is promoted
+Updated **2026-11-24** (second pass). The one place that says what is real. Five states, and nothing is promoted
 without the verification named.
 
 - **Verified** — implemented, with passing automated tests.
@@ -33,9 +33,13 @@ without the verification named.
 | Money cap fails closed when a model has no configured price | `tests/unit/test_eval_budget.py` |
 | Cache hits counted but never charged | `tests/unit/test_eval_budget.py` |
 | Spend ledger flags an incomplete cost total | `tests/unit/test_eval_budget.py` |
+| Weakness probes scored apart from the discriminating set | `tests/unit/test_eval_runner.py` |
+| Repeated attempts reach the provider separately and expose instability | `test_eval_runner.py`, `test_cache.py` |
+| A run of repeated identical errors aborts and reports no score | `tests/unit/test_eval_runner.py` |
+| Provider 401/403 reported as a credential failure, not a model failure | `tests/unit/test_oci_provider.py` |
 
 Gates: `ruff check`, `ruff format --check`, `mypy --strict` over `packages` and `apps`, and
-`pytest` — **61 tests passing, 81% coverage** (floor 80%, enforced in CI).
+`pytest` — **81 tests passing, 86% coverage** (floor 80%, enforced in CI).
 
 ## Implemented, hand-checked
 
@@ -82,3 +86,8 @@ in-process call cap.
    invoice exists the money cap cannot be enforced and the harness reports `cost=UNKNOWN`. The first
    real benchmark run is the calibration that fixes this.
 3. Max context window per callable model — not exposed by the API, not measured, left `None`.
+4. **`baseline-v2` has no measurement yet.** The task set (22 tasks, 20 discriminating + 2 weakness
+   probes) is built and its loader is tested, but the run on 2026-11-24 aborted: the browser session
+   token had expired six minutes earlier, so all 44 calls failed on credentials and nothing billed.
+   Only `baseline-v1` has recorded numbers. See
+   [docs/research/baseline-v1-results.md](research/baseline-v1-results.md).

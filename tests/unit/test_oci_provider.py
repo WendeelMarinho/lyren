@@ -38,3 +38,16 @@ def test_zero_quota_429_is_distinguished_from_real_throttling():
     assert isinstance(disabled, ModelDisabledByQuotaError)
     assert isinstance(throttled, ProviderError)
     assert not isinstance(throttled, ModelDisabledByQuotaError)
+
+
+def test_401_is_reported_as_a_credential_failure_not_a_model_failure():
+    from lyren_core.errors import ProviderAuthError
+
+    error = OCIGenerativeAIProvider._translate(
+        SPEC,
+        FakeServiceError(
+            401, "The required information to complete authentication was not provided"
+        ),
+    )
+
+    assert isinstance(error, ProviderAuthError)

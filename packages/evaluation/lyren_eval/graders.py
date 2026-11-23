@@ -39,6 +39,15 @@ def grade_contains_all(answer: str, expected: object) -> bool:
     return all(normalize(str(needle)) in haystack for needle in needles)
 
 
+def grade_not_contains(answer: str, expected: object) -> bool:
+    """Passes when none of the forbidden strings appears. Graded on a non-empty answer only."""
+    needles = expected if isinstance(expected, list) else [expected]
+    haystack = normalize(answer)
+    if not haystack:
+        return False
+    return not any(normalize(str(needle)) in haystack for needle in needles)
+
+
 def grade_regex(answer: str, expected: object) -> bool:
     return re.search(str(expected), answer.strip(), re.IGNORECASE | re.MULTILINE) is not None
 
@@ -104,6 +113,7 @@ GRADERS: dict[str, Grader] = {
     "exact": grade_exact,
     "exact_cased": grade_exact_cased,
     "contains_all": grade_contains_all,
+    "not_contains": grade_not_contains,
     "regex": grade_regex,
     "numeric": grade_numeric,
     "json_keys": grade_json_keys,

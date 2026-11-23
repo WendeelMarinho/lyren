@@ -65,6 +65,13 @@ class ChatRequest:
     max_output_tokens: int = 1024
     temperature: float = 0.0
     stop: tuple[str, ...] = ()
+    attempt: int = 0
+    """Distinguishes repeated observations of the same prompt.
+
+    Providers ignore it; the cassette cache includes it in the key, so repeat attempts are separate
+    recordings instead of collapsing into one cache hit. Without this, measuring variance would be
+    impossible under any cache mode but `off`.
+    """
 
 
 @dataclass(frozen=True, slots=True)

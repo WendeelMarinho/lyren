@@ -104,3 +104,21 @@ def test_off_mode_neither_reads_nor_writes(tmp_path):
 
     assert inner.calls == 2
     assert not list(tmp_path.rglob("*.json"))
+
+
+def test_repeated_attempts_do_not_collapse_into_one_cassette(tmp_path):
+    inner = CountingProvider()
+    provider = CachingChatProvider(inner, CassetteStore(tmp_path), CacheMode.AUTO)
+    second_attempt = dataclasses.replace(REQUEST, attempt=1)
+
+    first = provider.chat(SPEC, REQUEST)
+    second = provider.chat(SPEC, second_attempt)
+
+    assert inner.calls == 2
+    assert second.from_cache is False
+    assert first.text != second.text
+    assert provider.chat(SPEC, second_attempt).from_cache is True
+
+
+def test_attempt_index_changes_the_key():
+    assert cache_key(SPEC, REQUEST) != cache_key(SPEC, dataclasses.replace(REQUEST, attempt=1))

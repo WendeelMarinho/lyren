@@ -25,6 +25,17 @@ class ProviderError(LyrenError):
     http_status = 502
 
 
+class ProviderAuthError(ProviderError):
+    """The provider rejected our credentials.
+
+    Distinct from every other provider failure because it is never the model's fault and never
+    worth retrying across a whole task set: it would report a credential problem as a score.
+    """
+
+    code = "provider_auth_error"
+    http_status = 502
+
+
 class ModelNotAvailableError(ProviderError):
     """Model is absent from the provider's on-demand serving set."""
 

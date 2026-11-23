@@ -7,6 +7,7 @@ from lyren_core.errors import (
     ConfigError,
     ModelDisabledByQuotaError,
     ModelNotAvailableError,
+    ProviderAuthError,
     ProviderError,
 )
 from lyren_core.settings import OCIAuthMode, Settings
@@ -149,6 +150,11 @@ class OCIGenerativeAIProvider:
     def _translate(spec: ModelSpec, exc: Any) -> Exception:
         message = str(getattr(exc, "message", "") or "")
         status = int(getattr(exc, "status", 0) or 0)
+        if status in {401, 403} and "set to 0" not in message:
+            return ProviderAuthError(
+                "OCI rejected our credentials; the session token has probably expired",
+                detail=message,
+            )
         if status == 404:
             return ModelNotAvailableError(
                 f"{spec.id} is not served on demand in this tenancy", detail=message

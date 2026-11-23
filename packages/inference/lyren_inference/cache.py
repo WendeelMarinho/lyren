@@ -28,6 +28,7 @@ def cache_key(spec: ModelSpec, request: ChatRequest) -> str:
         "max_output_tokens": request.max_output_tokens,
         "temperature": request.temperature,
         "stop": list(request.stop),
+        "attempt": request.attempt,
     }
     canonical = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
