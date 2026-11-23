@@ -10,7 +10,7 @@ from lyren_core.errors import AuthError, ConfigError
 from lyren_core.identity import Principal, PrincipalStore, hash_key
 from lyren_core.metering import UsageMeter
 from lyren_core.settings import Settings
-from lyren_inference.cache import CachingChatProvider, CassetteStore
+from lyren_inference.cache import CachingProvider, CassetteStore
 from lyren_inference.ports import Availability, ChatProvider
 from lyren_inference.providers.local_llama import LocalLlamaProvider
 from lyren_inference.providers.oci import OCIGenerativeAIProvider
@@ -94,7 +94,7 @@ def get_chat_provider() -> ChatProvider | ProviderUnavailable:
         return ProviderUnavailable("; ".join(reasons))
 
     router = ProviderRouter(providers)
-    return CachingChatProvider(router, CassetteStore(settings.cache_dir), settings.cache_mode)
+    return CachingProvider(router, CassetteStore(settings.cache_dir), settings.cache_mode)
 
 
 def require_principal(

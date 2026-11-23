@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from lyren_api.deps import get_settings
-from lyren_api.routes import chat, health, models
+from lyren_api.routes import chat, embeddings, health, models
 from lyren_core.errors import LyrenError
 from lyren_core.ids import current_request_id, new_request_id, set_request_id
 from lyren_core.logging import configure_logging
@@ -22,9 +22,9 @@ def create_app() -> FastAPI:
         title="Lyren API",
         version="0.1.0",
         description=(
-            "Partially OpenAI-compatible. Implemented: /v1/models and non-streaming "
-            "/v1/chat/completions. Streaming, embeddings, files and agent runs are not implemented "
-            "and return an explicit error rather than a degraded response."
+            "Partially OpenAI-compatible. Implemented: /v1/models, non-streaming "
+            "/v1/chat/completions and /v1/embeddings. Streaming, files and agent runs are not "
+            "implemented and return an explicit error rather than a degraded response."
         ),
     )
 
@@ -57,6 +57,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(models.router)
     app.include_router(chat.router)
+    app.include_router(embeddings.router)
     return app
 
 

@@ -15,6 +15,8 @@ from lyren_inference.ports import (
     ApiFormat,
     ChatRequest,
     ChatResponse,
+    EmbedRequest,
+    EmbedResponse,
     Message,
     ModelSpec,
     Role,
@@ -145,6 +147,34 @@ class OCIGenerativeAIProvider:
             temperature=request.temperature,
             stop_sequences=list(request.stop) or None,
         )
+
+    def embed(self, spec: ModelSpec, request: EmbedRequest) -> EmbedResponse:
+        import oci
+        from oci.generative_ai_inference import models as genai
+
+        if not request.inputs:
+            raise ProviderError("an embedding request needs at least one input")
+
+        client = self._ensure_client()
+        details = genai.EmbedTextDetails(
+            compartment_id=self._compartment_id,
+            serving_mode=genai.OnDemandServingMode(model_id=spec.id),
+            inputs=list(request.inputs),
+            input_type=str(request.input_type),
+            truncate="END",
+        )
+
+        try:
+            raw = client.embed_text(details)
+        except oci.exceptions.ServiceError as exc:
+            raise self._translate(spec, exc) from exc
+
+        vectors = tuple(tuple(float(v) for v in row) for row in (raw.data.embeddings or ()))
+        if len(vectors) != len(request.inputs):
+            raise ProviderError(
+                f"{spec.id} returned {len(vectors)} vectors for {len(request.inputs)} inputs"
+            )
+        return EmbedResponse(model_id=spec.id, vectors=vectors)
 
     @staticmethod
     def _translate(spec: ModelSpec, exc: Any) -> Exception:

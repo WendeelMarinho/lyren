@@ -138,6 +138,8 @@ _ALIASES: tuple[AliasPolicy, ...] = (
         ("meta.llama-4-scout-17b-16e-instruct", "local/llama-cpp"),
         max_output_tokens=1024,
     ),
+    # Embeddings: max_output_tokens is unused here, kept only because policies are one shape.
+    AliasPolicy("lyren/embed", ("cohere.embed-v4.0",)),
     # The only alias on which prompt content never leaves our own host.
     AliasPolicy("lyren/local", ("local/llama-cpp",), max_output_tokens=1024),
     AliasPolicy(

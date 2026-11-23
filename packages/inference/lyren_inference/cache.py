@@ -13,9 +13,23 @@ import json
 from pathlib import Path
 from typing import Any
 
-from lyren_core.errors import CacheMissError
+from lyren_core.errors import CacheMissError, ProviderError
 from lyren_core.settings import CacheMode
-from lyren_inference.ports import ChatProvider, ChatRequest, ChatResponse, ModelSpec, Usage
+from lyren_inference.ports import (
+    ChatProvider,
+    ChatRequest,
+    ChatResponse,
+    EmbeddingProvider,
+    EmbedRequest,
+    EmbedResponse,
+    ModelSpec,
+    Usage,
+)
+
+
+def _digest(payload: dict[str, Any]) -> str:
+    canonical = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def cache_key(spec: ModelSpec, request: ChatRequest) -> str:
@@ -30,8 +44,20 @@ def cache_key(spec: ModelSpec, request: ChatRequest) -> str:
         "stop": list(request.stop),
         "attempt": request.attempt,
     }
-    canonical = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
-    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    return _digest(payload)
+
+
+def embed_cache_key(spec: ModelSpec, request: EmbedRequest) -> str:
+    return _digest(
+        {
+            "kind": "embed",
+            "provider": spec.provider,
+            "model_id": spec.id,
+            "pinned_version": spec.pinned_version,
+            "input_type": str(request.input_type),
+            "inputs": list(request.inputs),
+        }
+    )
 
 
 class CassetteStore:
@@ -58,6 +84,27 @@ class CassetteStore:
             from_cache=True,
         )
 
+    def get_embed(self, key: str) -> EmbedResponse | None:
+        path = self._path(key)
+        if not path.is_file():
+            return None
+        raw: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+        return EmbedResponse(
+            model_id=raw["model_id"],
+            vectors=tuple(tuple(float(v) for v in row) for row in raw["vectors"]),
+        )
+
+    def put_embed(self, key: str, response: EmbedResponse) -> None:
+        path = self._path(key)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(
+                {"model_id": response.model_id, "vectors": [list(v) for v in response.vectors]},
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+
     def put(self, key: str, response: ChatResponse) -> None:
         path = self._path(key)
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -72,7 +119,9 @@ class CassetteStore:
         )
 
 
-class CachingChatProvider:
+class CachingProvider:
+    """Caches chat and embeddings alike: both are deterministic inputs to an experiment."""
+
     def __init__(self, inner: ChatProvider, store: CassetteStore, mode: CacheMode) -> None:
         self._inner = inner
         self._store = store
@@ -99,4 +148,25 @@ class CachingChatProvider:
 
         response = self._inner.chat(spec, request)
         self._store.put(key, response)
+        return response
+
+    def embed(self, spec: ModelSpec, request: EmbedRequest) -> EmbedResponse:
+        inner = self._inner
+        if not isinstance(inner, EmbeddingProvider):
+            raise ProviderError(f"{inner.name} does not serve embeddings")
+
+        if self._mode is CacheMode.OFF:
+            return inner.embed(spec, request)
+
+        key = embed_cache_key(spec, request)
+
+        if self._mode is not CacheMode.RECORD:
+            hit = self._store.get_embed(key)
+            if hit is not None:
+                return hit
+            if self._mode is CacheMode.REPLAY:
+                raise CacheMissError(f"no embedding cassette for {spec.id} (key {key[:12]})")
+
+        response = inner.embed(spec, request)
+        self._store.put_embed(key, response)
         return response

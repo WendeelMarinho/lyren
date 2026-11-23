@@ -52,7 +52,7 @@ vary by tenancy, so treat this as a starting point for your own probe:
 | Chat | `cohere.command-a-03-2025` |
 | Chat | `meta.llama-3.3-70b-instruct` |
 | Chat | `meta.llama-4-scout-17b-16e-instruct` (MoE, 17B active) |
-| Embeddings | `cohere.embed-v4.0` — **1536 dimensions** |
+| Embeddings | `cohere.embed-v4.0` — **1536 dimensions**, asymmetric query/document |
 | Rerank | `cohere.rerank-v4.0-fast` |
 
 Returned 404: `openai.gpt-oss-120b`, `openai.gpt-oss-20b`, `cohere.command-r-08-2024`,
@@ -62,6 +62,17 @@ the epoch-zero retirement field was the only signal.
 
 Gemini and Grok families were reachable only where the per-model quota was non-zero, which it was
 not for us.
+
+## Embeddings carry an input type, and it is not cosmetic
+
+`cohere.embed-v4.0` takes `SEARCH_DOCUMENT`, `SEARCH_QUERY`, `CLASSIFICATION` or `CLUSTERING`.
+Query and document embeddings are **asymmetric**: indexing a corpus as queries, or the reverse,
+degrades recall with no error and no obvious symptom. Lyren therefore makes `input_type` part of the
+request contract rather than a default.
+
+Because the spaces are asymmetric, **absolute cosine similarity is not calibrated** — use the
+ranking. Verified on 2026-11-24: a correct match scored ~0.29 and an unrelated one ~0.11, so the
+ordering is clear while neither number resembles a "90% match".
 
 ## Two request formats, one endpoint
 

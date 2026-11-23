@@ -20,6 +20,7 @@ rather than pretending otherwise. See [docs/IMPLEMENTATION_STATUS.md](docs/IMPLE
 | `GET /v1/models` (OpenAI-shaped) | implemented, tested |
 | `GET /lyren/v1/models` (native, with availability verdicts) | implemented, tested |
 | `POST /v1/chat/completions`, non-streaming | implemented, tested |
+| `POST /v1/embeddings` on `cohere.embed-v4.0` (1536 dims), with input types | implemented, tested |
 | Pinned model registry + alias routing + fallback | implemented, tested |
 | Principals: per-person identity, quotas, model allow-lists, key revocation | implemented, tested |
 | Per-principal and deployment-wide spend caps | implemented, tested |
@@ -28,7 +29,7 @@ rather than pretending otherwise. See [docs/IMPLEMENTATION_STATUS.md](docs/IMPLE
 | Spend guards: call cap and money cap, failing closed on unknown prices | implemented, tested |
 | OCI Generative AI chat provider | implemented; verified by hand against the live service |
 | Local llama.cpp provider + provider router dispatching by model | implemented, tested |
-| Streaming SSE, embeddings, files, agent runs, memory | **not implemented** — these return an explicit error |
+| Streaming SSE, files, agent runs, memory | **not implemented** — these return an explicit error |
 | GGUF selection and local benchmark | **not done** — needs ARM hardware, Phase 3 |
 | Web UI | **not implemented** — Phase 2 |
 
@@ -79,6 +80,12 @@ print(
     .message.content
 )
 ```
+
+`input_type` on `/v1/embeddings` is deliberately explicit: indexing a document as a query, or the
+reverse, degrades recall silently, so the field is part of the contract rather than a default to
+forget. Cohere's query and document embeddings are asymmetric, so **use the ranking, not the
+absolute similarity** — a correct match scored ~0.29 against ~0.11 for an unrelated one in our
+verification.
 
 `stream=True` is refused with a clear error. The surface is *partially* OpenAI-compatible and the
 docs never claim more than is tested.

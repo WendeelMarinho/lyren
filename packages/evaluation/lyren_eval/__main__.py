@@ -18,7 +18,7 @@ from lyren_eval.budget import BudgetGuard
 from lyren_eval.pricing import PriceBook
 from lyren_eval.runner import RunReport, run_taskset
 from lyren_eval.tasks import Scoring, TaskSet
-from lyren_inference.cache import CachingChatProvider, CassetteStore
+from lyren_inference.cache import CachingProvider, CassetteStore
 from lyren_inference.providers.oci import OCIGenerativeAIProvider
 from lyren_inference.registry import ModelRegistry
 
@@ -58,7 +58,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     mode = CacheMode(args.cache) if args.cache else settings.cache_mode
-    cached = CachingChatProvider(provider, CassetteStore(settings.cache_dir), mode)
+    cached = CachingProvider(provider, CassetteStore(settings.cache_dir), mode)
     prices = PriceBook.from_file(args.price_book) if args.price_book else PriceBook.empty()
     guard = BudgetGuard(
         cached,

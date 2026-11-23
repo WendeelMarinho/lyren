@@ -95,8 +95,45 @@ class ChatResponse:
     from_cache: bool = False
 
 
+class EmbedInputType(StrEnum):
+    """Cohere distinguishes these, and retrieval quality depends on using the right one.
+
+    A document indexed as a query, or the reverse, degrades recall silently — so this is required
+    rather than defaulted away.
+    """
+
+    SEARCH_DOCUMENT = "SEARCH_DOCUMENT"
+    SEARCH_QUERY = "SEARCH_QUERY"
+    CLASSIFICATION = "CLASSIFICATION"
+    CLUSTERING = "CLUSTERING"
+
+
+@dataclass(frozen=True, slots=True)
+class EmbedRequest:
+    inputs: tuple[str, ...]
+    input_type: EmbedInputType
+
+
+@dataclass(frozen=True, slots=True)
+class EmbedResponse:
+    model_id: str
+    vectors: tuple[tuple[float, ...], ...]
+    usage: Usage = field(default_factory=Usage)
+
+    @property
+    def dimensions(self) -> int | None:
+        return len(self.vectors[0]) if self.vectors else None
+
+
 @runtime_checkable
 class ChatProvider(Protocol):
     name: str
 
     def chat(self, spec: ModelSpec, request: ChatRequest) -> ChatResponse: ...
+
+
+@runtime_checkable
+class EmbeddingProvider(Protocol):
+    name: str
+
+    def embed(self, spec: ModelSpec, request: EmbedRequest) -> EmbedResponse: ...

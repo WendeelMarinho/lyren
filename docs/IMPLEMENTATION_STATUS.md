@@ -17,6 +17,11 @@ without the verification named.
 | `GET /v1/models`, OpenAI shape, excludes non-callable models | `tests/unit/test_api.py` |
 | `GET /lyren/v1/models` exposing availability verdicts | `tests/unit/test_api.py` |
 | `POST /v1/chat/completions`, non-streaming | `tests/unit/test_api.py` |
+| `POST /v1/embeddings`: one vector per input, in order, OpenAI shape | `tests/unit/test_embeddings_api.py` |
+| `input_type` reaches the provider and is reported back | `tests/unit/test_embeddings_api.py` |
+| A chat model is refused on the embeddings route, and the reverse | `tests/unit/test_embeddings_api.py` |
+| Embeddings count against the principal's quota | `tests/unit/test_embeddings_api.py` |
+| Embeddings cached separately per input type | `tests/unit/test_cache.py` |
 | A key resolves to a named principal; unknown, revoked and disabled fail alike | `tests/unit/test_identity.py` |
 | Revoking one key leaves a principal's other keys working | `tests/unit/test_identity.py` |
 | A key referencing a missing principal is rejected at construction | `tests/unit/test_identity.py` |
@@ -53,13 +58,14 @@ without the verification named.
 | Provider 401/403 reported as a credential failure, not a model failure | `tests/unit/test_oci_provider.py` |
 
 Gates: `ruff check`, `ruff format --check`, `mypy --strict` over `packages` and `apps`, and
-`pytest` — **124 tests passing, 87% coverage** (floor 80%, enforced in CI).
+`pytest` — **138 tests passing, 87% coverage** (floor 80%, enforced in CI).
 
 ## Implemented, hand-checked
 
 | Item | What was checked |
 |---|---|
 | `OCIGenerativeAIProvider` chat, GENERIC and COHERE formats | Live calls on 2026-11-23 returned completions from the three callable models |
+| `OCIGenerativeAIProvider.embed` | Live call on 2026-11-24 returned 1536-dim vectors with correct semantic ordering |
 | Security-token, API-key and instance-principal auth paths | Security-token path exercised; the other two are written but not run |
 
 ## Planned

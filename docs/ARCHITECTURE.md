@@ -16,8 +16,9 @@ Clients (OpenAI SDK, curl, CLI, web UI)
    Lyren API  (apps/api)
      /healthz /readyz /v1/models /v1/chat/completions   IMPLEMENTED
      /lyren/v1/models (native, with availability)       IMPLEMENTED
-     streaming, /v1/embeddings, /v1/responses,
-     /v1/files, /v1/agents/runs, /v1/memory/*           NOT IMPLEMENTED
+     /v1/embeddings (input types, 1536 dims)            IMPLEMENTED
+     streaming, /v1/responses, /v1/files,
+     /v1/agents/runs, /v1/memory/*                      NOT IMPLEMENTED
         |
    Intelligence Runtime  (packages/inference, then packages/agents)
      ModelRegistry  -> pinned ids, alias policies, probe verdicts   IMPLEMENTED
@@ -42,7 +43,9 @@ is what makes the router, the cache and the benchmark harness compose.
 **The cache is a decorator, not a layer.** `CachingChatProvider` wraps any `ChatProvider`, so
 recording and replaying is orthogonal to which provider is in use. It wraps the *router*, so a cache
 hit never reaches dispatch and one cassette store covers every provider — the key already includes
-`provider`.
+`provider`. It caches **embeddings as well as chat**, by the same argument: both are deterministic
+inputs to an experiment, and a retrieval benchmark that re-embeds its corpus on every run is neither
+reproducible nor affordable.
 
 **`lyren/local` is a privacy boundary, not only a cheap arm.** Every prompt sent to an OCI-backed
 alias is processed by Oracle as a third party; `lyren/local` is the only alias on which content stays

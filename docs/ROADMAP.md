@@ -36,8 +36,11 @@ never leaves our host.
 x86 development machine answers nothing about 2 ARM OCPUs.
 → [local inference plan](research/local-inference-plan.md)
 
-**Next:** streaming SSE with cancellation, `/v1/embeddings` on `cohere.embed-v4.0`, and the first web
-UI on assistant-ui.
+**Done:** `/v1/embeddings` on `cohere.embed-v4.0`, verified live at 1536 dimensions, with explicit
+`input_type` because indexing a document as a query degrades recall silently. Embeddings are cached
+like chat, so a retrieval benchmark can replay its corpus instead of re-embedding it.
+
+**Next:** streaming SSE with cancellation, then the first web UI on assistant-ui.
 
 The order changed on 2026-11-24. Local inference was first only because it was free; with spend
 authorised, the baseline measurement comes first — it is what makes every later component
