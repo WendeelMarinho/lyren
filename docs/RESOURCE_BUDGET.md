@@ -1,13 +1,17 @@
 # Resource Budget
 
-The governing assumption is the **Always Free envelope: ~2 OCPU ARM, 12 GB RAM**, on a single
+The governing constraint is the **Always Free envelope: ~2 OCPU ARM, 12 GB RAM**, on a single
 availability domain.
 
-The tenancy's service limits are higher than that, but a limit is a ceiling and not a free
-allowance: the Always Free A1 allowance is measured in **OCPU-hours per month**, so an instance sized
-inside the service limit can still exceed the free allowance by running continuously. The real limit
-values and the account type live in the private infrastructure repository (`lyren-infra`,
-`docs/TENANCY_INVENTORY.md`).
+This is a requirement rather than caution. The account is a **Free Trial**, so its higher limits are
+temporary: when the trial ends the account reverts to Always Free and anything provisioned above
+that allowance is disabled and then deleted. An instance sized to the trial's limits would collapse
+on its expiry date.
+
+A limit is also not an allowance even within Always Free: the A1 entitlement is measured in
+**OCPU-hours per month**, so an instance sized inside the service limit can still exceed it by
+running continuously. The real limit values live in the private infrastructure repository
+(`lyren-infra`, `docs/TENANCY_INVENTORY.md`).
 
 ## Target allocation on one A1 VM
 
@@ -54,13 +58,14 @@ For benchmark runs, `lyren_eval.budget.BudgetGuard` is the hard stop: a **call c
 An OCI budget only alerts and is not the control.
 → [ADR-0005](decisions/0005-spend-control-in-process.md)
 
-**Unknown:** the per-token price of each model. Oracle does not publish it through the API and usage
-data lags by hours, so until an invoice exists every call is treated as billable and bounded by call
-count rather than by money. See [OCI_DISCOVERY.md](OCI_DISCOVERY.md).
+**Unknown:** the per-token price of each model, and the spend itself. Oracle publishes no price
+through the API, and both `COST` and `USAGE` return nothing after roughly 200 Generative AI calls —
+so the platform cannot read its own consumption at all. Every call is treated as billable and
+bounded by call count rather than by money. See [OCI_DISCOVERY.md](OCI_DISCOVERY.md).
 
-## Where to spend, when there is budget
+## Where to spend, while the trial lasts
 
-Keep the always-on components inside the Always Free envelope and spend on **bursty, high-value**
-work: benchmark and evaluation runs. A permanently larger A1 instance costs roughly $55/month at list
-price for capacity the platform does not yet need, and a modest allowance disappears into it in a few
-months.
+Keep the always-on components inside the Always Free envelope and spend the trial on **bursty,
+high-value** work: benchmark and evaluation runs. Trial credits are the wrong thing to convert into
+standing capacity — a permanently larger A1 instance would consume them for capacity the platform
+does not need, and would then be disabled when the trial ends anyway.

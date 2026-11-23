@@ -3,14 +3,19 @@
 **Date:** 2026-11-23 · **Status:** Accepted
 
 ## Context
-A spend allowance was made available for OCI. Checked on 2026-11-23, the tenancy reports **zero
-promotional credit** (`CREDIT`, `ALLCREDIT` and `EXPIREDCREDIT` all empty), zero recorded cost and
-**no configured budget**, so the allowance is a payment-method-backed one rather than an Oracle
-credit grant.
+A spend allowance was made available for OCI. The tenancy reported **zero promotional credit**
+(`CREDIT`, `ALLCREDIT` and `EXPIREDCREDIT` all empty), zero recorded cost and no configured budget.
 
-That distinction matters: promotional credit stops when it runs out. A pay-as-you-go account does
-not stop at any figure — it keeps billing. And an **OCI budget only alerts; it does not block
-spending.**
+**Correction, same day:** the account is a **Free Trial**, confirmed from the Console banner. The
+API simply does not surface trial credits — `COST` and `USAGE` also report nothing after roughly 200
+Generative AI calls. The earlier reading of "pay-as-you-go headroom with no automatic stop" was
+wrong: a trial does stop, by reverting to Always Free.
+
+**The decision below does not change, but one of its reasons does.** The spend cap is no longer
+justified by "nothing stops the billing"; it is justified by something sharper — **the platform
+cannot see its own spending at all.** Neither cost nor usage is readable through the API, so an
+external control has nothing to act on and an internal one cannot convert tokens to money. An **OCI
+budget only alerts, and here it has nothing to alert on.**
 
 Oracle's per-token prices for on-demand Generative AI are also not exposed by the API and have not
 been measured, so the system cannot convert tokens to money yet.
@@ -28,7 +33,8 @@ sees spend the application cannot (compute, storage). It is not the control.
 
 ## Consequences
 Failing closed on an unpriced model is the deliberate choice. The alternative — treating an unknown
-price as zero — is exactly how an uncapped bill happens on a pay-as-you-go account.
+price as zero — is how an uncapped bill happens, and on a trial it is how the credits that fund
+everything disappear without a reading to show for it.
 
 The first benchmark run therefore uses `--max-calls` with no money cap: cost is bounded by call count
 and per-task output budget rather than by price. The invoice from that run is what populates the

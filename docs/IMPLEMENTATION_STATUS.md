@@ -133,10 +133,13 @@ in-process call cap. Infrastructure lives in a separate private repository, `lyr
 
 ## Open questions
 
-1. **Always Free or pay-as-you-go?** Unresolved via API: no promotional credit appears in
-   `CREDIT`/`ALLCREDIT`/`EXPIREDCREDIT`, so the available allowance reads as pay-as-you-go headroom
-   with **no automatic stop**. Console → Billing & Cost Management settles it. Tenancy specifics are
-   in the private `lyren-infra` repository.
+1. **Resolved: the account is a Free Trial.** Confirmed from the Console banner. The consequence is
+   architectural, not administrative: the tenancy's elevated limits exist only while the trial runs,
+   and when it ends the account reverts to Always Free with anything above that allowance disabled
+   and then deleted. Sizing for roughly 2 OCPU and 12 GB is therefore a requirement, not caution.
+   The trial's **expiry date is the open item**, since it is a deadline. The API surfaces neither
+   credits nor usage, so it is Console-only. Tenancy specifics live in the private `lyren-infra`
+   repository.
 2. **Per-token price of each callable model.** Not exposed by the API, not measured. Until an
    invoice exists the money cap cannot be enforced and the harness reports `cost=UNKNOWN`. The first
    real benchmark run is the calibration that fixes this.
