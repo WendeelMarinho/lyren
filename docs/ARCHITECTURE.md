@@ -11,6 +11,8 @@ Clients (OpenAI SDK, curl, CLI, web UI)
         |
    Identity and metering  (packages/core)
      PrincipalStore  -> who is calling, what they may use      IMPLEMENTED
+     IdTokenVerifier -> Google identity, fully verified        IMPLEMENTED
+     SessionTokenIssuer -> principal-bound browser tokens      IMPLEMENTED
      UsageMeter      -> per-principal + deployment caps        IMPLEMENTED
         |
    Lyren API  (apps/api)
@@ -57,6 +59,12 @@ independently of cost. → [ADR-0007](decisions/0007-provider-router-and-local-b
 chat route records a verdict when a candidate fails, so catalog drift is observed rather than
 assumed. This exists because the OCI catalog demonstrably lies; see
 [OCI_DISCOVERY.md](OCI_DISCOVERY.md).
+
+**Two credential types, one principal.** A long-lived API key for programmatic use and a
+short-lived session token minted after Google sign-in resolve to the same `Principal`, so quotas,
+allow-lists and metering never learn which was used. The browser never holds a shared key: a
+Next.js server proxying with one API key would collapse every web user into one principal and
+quietly undo per-person attribution. → [ADR-0009](decisions/0009-google-sign-in.md)
 
 **Identity precedes everything.** A key resolves to a `Principal`, and the principal — not the
 request — decides the model allow-list, the output-token ceiling and the quota. Both caps are

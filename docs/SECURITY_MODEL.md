@@ -16,6 +16,10 @@ if a control is listed as enforced, there is a test for it.
 | Unknown key, revoked key and disabled principal fail **identically** | `PrincipalStore.resolve` |
 | Revocation keeps the record (`revoked_at`), preserving the access trail | `ApiKeyRecord` |
 | A principal may hold several keys, so one can be rotated alone | `ApiKeyRecord.principal_id` |
+| Google id tokens fully verified: signature, `iss`, `aud`, `exp`, `email_verified` | `lyren_core/federation.py` |
+| Optional Workspace-domain gate, independent of the address allow-list | `IdTokenVerifier` |
+| No auto-provisioning: an unclaimed Google account is refused | `PrincipalStore.resolve_email` |
+| Session tokens are principal-bound and prefixed, never confused with API keys | `lyren_core/federation.py` |
 | **Per-principal** rate limit and daily call cap, checked before any provider call | `lyren_core/metering.py` |
 | **Deployment-wide** daily cap, because the sum of individual quotas bounds nothing | `UsageMeter` |
 | Per-principal model allow-list, enforced on call **and** on `/v1/models` | `Principal.may_use` |
@@ -44,7 +48,7 @@ Recorded in [ADR-0006](decisions/0006-principals-not-api-keys.md).
 | TLS termination and restrictive CORS | API is loopback-only until then; **do not expose it** | 3 |
 | Audit log of privileged and per-principal operations | attribution exists in metering but is not durable | 3 |
 | Key rotation and revocation workflow | revocation works, but by hand-editing a JSON file | 3/5 |
-| Session auth for the web UI | no UI exists yet | 2 |
+| Session revocation before expiry | disabling a principal takes effect within one session TTL, not instantly | 5 |
 | Per-principal data isolation in storage | no persistence yet, so nothing is co-mingled either | 5 |
 | Verifiable deletion of a person's data | required before real data is stored | 5 |
 | Prompt-injection defences for retrieved documents | no retrieval exists yet | 5 |

@@ -43,10 +43,14 @@ like chat, so a retrieval benchmark can replay its corpus instead of re-embeddin
 **Done:** streaming SSE with cancellation, verified end to end against the live service.
 → [ADR-0008](decisions/0008-streaming.md)
 
-**Next:** the first web UI on assistant-ui. Open question before it starts: whether the Next.js app
-lives in this monorepo as `apps/web` or in its own repository, and how browser sessions authenticate
-— a session is not a bearer API key, and with named principals that is a product decision rather
-than a coding one.
+**Done:** Google sign-in exchanged for a principal-bound session token, `GET /lyren/v1/me`, and the
+public sign-in config endpoint. Both questions that blocked the UI are answered: it lives in its own
+repository, `lyren-web`, and browsers authenticate with Google.
+→ [ADR-0009](decisions/0009-google-sign-in.md)
+
+**Next:** the Next.js scaffold in `lyren-web`, which needs the Google OAuth client to exist before it
+can sign in. Nothing in the API waits on it — the client id and the domain restriction are already
+configuration.
 
 The order changed on 2026-11-24. Local inference was first only because it was free; with spend
 authorised, the baseline measurement comes first — it is what makes every later component

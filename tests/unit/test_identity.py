@@ -125,3 +125,41 @@ def test_a_file_with_no_principals_is_rejected(tmp_path):
 
     with pytest.raises(ConfigError, match="no principals"):
         PrincipalStore.from_file(path)
+
+
+def test_a_verified_address_resolves_to_the_principal_that_claims_it():
+    ana = Principal(id="ana", name="Ana", emails=frozenset({"ana@example.com"}))
+    store = PrincipalStore((ana,), ())
+
+    assert store.resolve_email("Ana@Example.com ") == ana
+
+
+def test_an_address_nobody_claims_resolves_to_nothing():
+    store = PrincipalStore((Principal(id="ana", name="Ana", emails=frozenset({"ana@x.com"})),), ())
+
+    assert store.resolve_email("stranger@gmail.com") is None
+
+
+def test_a_disabled_principal_cannot_sign_in_with_its_address():
+    disabled = Principal(id="ana", name="Ana", emails=frozenset({"ana@example.com"}), enabled=False)
+    store = PrincipalStore((disabled,), ())
+
+    assert store.resolve_email("ana@example.com") is None
+
+
+def test_an_address_claimed_by_two_principals_fails_at_construction():
+    first = Principal(id="ana", name="Ana", emails=frozenset({"shared@example.com"}))
+    second = Principal(id="bruno", name="Bruno", emails=frozenset({"shared@example.com"}))
+
+    with pytest.raises(ConfigError, match="claimed by both"):
+        PrincipalStore((first, second), ())
+
+
+def test_resolve_id_honours_the_enabled_flag():
+    store = PrincipalStore(
+        (Principal(id="ana", name="Ana"), Principal(id="old", name="Old", enabled=False)), ()
+    )
+
+    assert store.resolve_id("ana") is not None
+    assert store.resolve_id("old") is None
+    assert store.resolve_id("ghost") is None

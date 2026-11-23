@@ -7,6 +7,7 @@ from functools import lru_cache
 from fastapi import Depends, Header
 
 from lyren_core.errors import AuthError, ConfigError
+from lyren_core.federation import SESSION_TOKEN_PREFIX, IdTokenVerifier, SessionTokenIssuer
 from lyren_core.identity import Principal, PrincipalStore, hash_key
 from lyren_core.metering import UsageMeter
 from lyren_core.settings import Settings
@@ -97,15 +98,63 @@ def get_chat_provider() -> ChatProvider | ProviderUnavailable:
     return CachingProvider(router, CassetteStore(settings.cache_dir), settings.cache_mode)
 
 
+@lru_cache(maxsize=1)
+def get_token_issuer() -> SessionTokenIssuer:
+    settings = get_settings()
+    if not settings.session_secret:
+        raise ConfigError("browser sign-in needs LYREN_SESSION_SECRET")
+    return SessionTokenIssuer(settings.session_secret, ttl_seconds=settings.session_ttl_seconds)
+
+
+@lru_cache(maxsize=1)
+def get_id_token_verifier() -> IdTokenVerifier:
+    settings = get_settings()
+    if not settings.google_client_id:
+        raise ConfigError("Google sign-in needs LYREN_GOOGLE_CLIENT_ID")
+    return IdTokenVerifier(
+        settings.google_client_id,
+        allowed_domains=frozenset(settings.google_allowed_domains),
+    )
+
+
+def get_optional_token_issuer() -> SessionTokenIssuer | None:
+    """The issuer, or nothing when this deployment accepts only API keys.
+
+    Injected rather than looked up, so a deployment without browser sign-in is a configuration
+    state and not an exception path on every request.
+    """
+    try:
+        return get_token_issuer()
+    except ConfigError:
+        return None
+
+
 def require_principal(
     authorization: str | None = Header(default=None),
     store: PrincipalStore = Depends(get_principal_store),
+    issuer: SessionTokenIssuer | None = Depends(get_optional_token_issuer),
 ) -> Principal:
-    """Identifies who is calling. An unknown, revoked or disabled key is rejected identically."""
+    """Identifies who is calling, from either credential type.
+
+    Two kinds of bearer token reach the same principal: a long-lived API key for programmatic use,
+    and a short-lived session token minted after Google sign-in. The session token carries a prefix
+    so the two are never confused — a malformed key is never tried as a token or the reverse.
+
+    Every failure — unknown key, revoked key, expired token, disabled principal — is reported the
+    same way. The caller learns the credential does not work, never which of those it was.
+    """
     if not authorization or not authorization.lower().startswith("bearer "):
         raise AuthError("missing bearer token")
 
-    principal = store.resolve(hash_key(authorization[7:]))
+    credential = authorization[7:].strip()
+
+    if credential.startswith(SESSION_TOKEN_PREFIX):
+        if issuer is None:
+            raise AuthError("session tokens are not accepted by this deployment")
+        principal = store.resolve_id(issuer.read(credential))
+    else:
+        principal = store.resolve(hash_key(credential))
+
     if principal is None:
-        raise AuthError("unknown or revoked api key")
+        raise AuthError("unknown, revoked or expired credential")
     return principal

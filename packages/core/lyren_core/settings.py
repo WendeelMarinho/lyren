@@ -38,6 +38,16 @@ class Settings(BaseSettings):
     principals_file: Path | None = None
     """The real authentication mechanism for a shared deployment."""
 
+    session_secret: str | None = None
+    """Signs browser session tokens. Required for Google sign-in."""
+    session_ttl_seconds: int = 1800
+    """Also the revocation window: a signed token cannot be withdrawn before it expires."""
+
+    google_client_id: str | None = None
+    google_allowed_domains: Annotated[tuple[str, ...], NoDecode] = ()
+    """Restricts sign-in to Workspace domains. Empty permits any verified Google account that a
+    principal already claims."""
+
     api_key_hashes: Annotated[tuple[str, ...], NoDecode] = ()
     """Single-principal development shortcut. Refused outside a local environment."""
 
@@ -65,7 +75,7 @@ class Settings(BaseSettings):
     cache_mode: CacheMode = CacheMode.OFF
     cache_dir: Path = Path(".lyren-cache")
 
-    @field_validator("api_key_hashes", mode="before")
+    @field_validator("api_key_hashes", "google_allowed_domains", mode="before")
     @classmethod
     def _split_hashes(cls, value: object) -> object:
         """Comma-separated, not JSON.
@@ -85,6 +95,10 @@ class Settings(BaseSettings):
     @property
     def is_local(self) -> bool:
         return self.environment is Environment.LOCAL
+
+    @property
+    def google_sign_in_configured(self) -> bool:
+        return bool(self.google_client_id) and bool(self.session_secret)
 
     @property
     def auth_configured(self) -> bool:

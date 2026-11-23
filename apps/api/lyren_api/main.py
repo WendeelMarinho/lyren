@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from lyren_api.deps import get_settings
-from lyren_api.routes import chat, embeddings, health, models
+from lyren_api.routes import auth, chat, embeddings, health, models
 from lyren_core.errors import LyrenError
 from lyren_core.ids import current_request_id, new_request_id, set_request_id
 from lyren_core.logging import configure_logging
@@ -58,6 +58,7 @@ def create_app() -> FastAPI:
     app.include_router(models.router)
     app.include_router(chat.router)
     app.include_router(embeddings.router)
+    app.include_router(auth.router)
     return app
 
 

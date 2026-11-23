@@ -23,6 +23,8 @@ rather than pretending otherwise. See [docs/IMPLEMENTATION_STATUS.md](docs/IMPLE
 | `POST /v1/embeddings` on `cohere.embed-v4.0` (1536 dims), with input types | implemented, tested |
 | Pinned model registry + alias routing + fallback | implemented, tested |
 | Principals: per-person identity, quotas, model allow-lists, key revocation | implemented, tested |
+| Google sign-in exchanged for a principal-bound session token | implemented, tested |
+| `GET /lyren/v1/me`: principal, quota and today's usage | implemented, tested |
 | Per-principal and deployment-wide spend caps | implemented, tested |
 | Record/replay cache for model calls | implemented, tested |
 | Evaluation harness: frozen task set, deterministic graders, benchmark runner | implemented, tested |
@@ -30,6 +32,7 @@ rather than pretending otherwise. See [docs/IMPLEMENTATION_STATUS.md](docs/IMPLE
 | OCI Generative AI chat provider | implemented; verified by hand against the live service |
 | Local llama.cpp provider + provider router dispatching by model | implemented, tested |
 | Files, agent runs, memory | **not implemented** — these return an explicit error |
+| Web interface | **not implemented** — a separate repository, `lyren-web` |
 | GGUF selection and local benchmark | **not done** — needs ARM hardware, Phase 3 |
 | Web UI | **not implemented** — Phase 2 |
 
@@ -120,7 +123,8 @@ spending uncapped. See [ADR-0005](docs/decisions/0005-spend-control-in-process.m
 
 ```
 apps/api            FastAPI application
-packages/core       settings, errors, structured logging, request ids, principals, metering
+packages/core       settings, errors, structured logging, request ids, principals, metering,
+                    Google sign-in and session tokens
 packages/inference  model registry, provider ports, record/replay cache, provider router,
                     OCI and local llama.cpp providers
 packages/evaluation frozen task sets, graders, benchmark runner, spend guards

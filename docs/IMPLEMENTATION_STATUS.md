@@ -23,6 +23,15 @@ without the verification named.
 | Embeddings count against the principal's quota | `tests/unit/test_embeddings_api.py` |
 | Embeddings cached separately per input type | `tests/unit/test_cache.py` |
 | A key resolves to a named principal; unknown, revoked and disabled fail alike | `tests/unit/test_identity.py` |
+| Google id token verified for signature, issuer, audience, expiry, email_verified | `tests/unit/test_federation.py` |
+| A token for another audience or signed by another key is refused | `tests/unit/test_federation.py` |
+| Workspace domain restriction, including refusing a personal account | `tests/unit/test_federation.py` |
+| A Google account no principal claims is refused — no auto-provisioning | `test_federation.py`, `test_auth_api.py` |
+| One address claimed by two principals fails at startup | `tests/unit/test_identity.py` |
+| Session token round-trips to its principal; expired, tampered and wrong-type refused | `tests/unit/test_federation.py` |
+| An API key is never mistaken for a session token, or the reverse | `tests/unit/test_federation.py` |
+| Both credential types reach the same principal and the same attribution | `tests/unit/test_auth_api.py` |
+| `GET /lyren/v1/me` reports quota and real usage | `tests/unit/test_auth_api.py` |
 | Revoking one key leaves a principal's other keys working | `tests/unit/test_identity.py` |
 | A key referencing a missing principal is rejected at construction | `tests/unit/test_identity.py` |
 | Per-principal rate limit and daily cap, refused before any provider call | `test_metering.py`, `test_api.py` |
@@ -66,7 +75,7 @@ without the verification named.
 | Provider 401/403 reported as a credential failure, not a model failure | `tests/unit/test_oci_provider.py` |
 
 Gates: `ruff check`, `ruff format --check`, `mypy --strict` over `packages` and `apps`, and
-`pytest` — **158 tests passing, 87% coverage** (floor 80%, enforced in CI).
+`pytest` — **189 tests passing, 87% coverage** (floor 80%, enforced in CI).
 
 ## Implemented, hand-checked
 

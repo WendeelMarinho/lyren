@@ -42,6 +42,8 @@ class Principal:
     quota: Quota = field(default_factory=Quota)
     allowed_models: frozenset[str] | None = None
     """None means every callable model and alias. A set restricts to those names."""
+    emails: frozenset[str] = frozenset()
+    """Verified Google addresses that map to this principal. Empty means no web sign-in."""
     enabled: bool = True
 
     def may_use(self, model: str) -> bool:
@@ -75,6 +77,17 @@ class PrincipalStore:
             raise ConfigError(f"api keys reference unknown principals: {orphans}")
         self._keys = {k.key_hash: k for k in keys}
 
+        self._by_email: dict[str, str] = {}
+        for principal in principals:
+            for email in principal.emails:
+                normalised = email.strip().lower()
+                claimed = self._by_email.get(normalised)
+                if claimed is not None and claimed != principal.id:
+                    raise ConfigError(
+                        f"{normalised} is claimed by both {claimed} and {principal.id}"
+                    )
+                self._by_email[normalised] = principal.id
+
     def __len__(self) -> int:
         return len(self._principals)
 
@@ -86,6 +99,26 @@ class PrincipalStore:
         if record is None or not record.active:
             return None
         principal = self._principals.get(record.principal_id)
+        if principal is None or not principal.enabled:
+            return None
+        return principal
+
+    def resolve_email(self, email: str) -> Principal | None:
+        """Maps a verified federated address to a principal, or to nothing.
+
+        No auto-provisioning: an address nobody declared resolves to nothing, so holding a Google
+        account is not by itself permission to use this deployment.
+        """
+        principal_id = self._by_email.get(email.strip().lower())
+        if principal_id is None:
+            return None
+        principal = self._principals.get(principal_id)
+        if principal is None or not principal.enabled:
+            return None
+        return principal
+
+    def resolve_id(self, principal_id: str) -> Principal | None:
+        principal = self._principals.get(principal_id)
         if principal is None or not principal.enabled:
             return None
         return principal
@@ -122,6 +155,7 @@ class PrincipalStore:
                     if entry.get("allowed_models") is not None
                     else None
                 ),
+                emails=frozenset(str(e).strip().lower() for e in entry.get("emails", ())),
                 enabled=bool(entry.get("enabled", True)),
             )
             for entry in raw.get("principals", [])

@@ -3,13 +3,17 @@
     "Copy to principals.json, which is git-ignored. Only key hashes belong here, never keys.",
     "Mint a key and its hash:  KEY=$(openssl rand -hex 32); echo $KEY; printf %s $KEY | sha256sum",
     "Hand the key to the person over a channel you trust, and keep only the hash.",
-    "To revoke, set revoked_at. Do not delete the record: the audit trail needs it."
+    "To revoke, set revoked_at. Do not delete the record: the audit trail needs it.",
+    "emails are the verified Google addresses that may sign in as this principal.",
+    "A principal with no emails cannot use the web interface, only its API keys.",
+    "One address belongs to exactly one principal; a duplicate fails at startup."
   ],
   "principals": [
     {
       "id": "ana",
       "name": "Ana Souza",
-      "quota": { "requests_per_minute": 20, "calls_per_day": 300, "max_output_tokens": 2048 }
+      "quota": { "requests_per_minute": 20, "calls_per_day": 300, "max_output_tokens": 2048 },
+      "emails": ["ana@example.com"]
     },
     {
       "id": "bruno",
