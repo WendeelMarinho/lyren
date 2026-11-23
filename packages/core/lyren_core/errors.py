@@ -20,6 +20,20 @@ class AuthError(LyrenError):
     http_status = 401
 
 
+class ForbiddenError(LyrenError):
+    """Authenticated, but not permitted to do this."""
+
+    code = "forbidden"
+    http_status = 403
+
+
+class QuotaExceededError(LyrenError):
+    """The principal's own quota is spent, independent of any other principal's."""
+
+    code = "quota_exceeded"
+    http_status = 429
+
+
 class ProviderError(LyrenError):
     code = "provider_error"
     http_status = 502

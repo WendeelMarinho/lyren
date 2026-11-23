@@ -9,8 +9,10 @@ OCI audit, reuse matrix, architecture, resource budget, ADRs.
 unverified.
 
 ## Phase 1 — Foundation · DONE
-Monorepo, FastAPI app, settings, structured logging, bearer auth, model registry, record/replay
-cache, OCI provider, offline tests, CI, arm64 Dockerfile, compose.
+Monorepo, FastAPI app, settings, structured logging, model registry, record/replay cache, OCI
+provider, offline tests, CI, arm64 Dockerfile, compose. Authentication was later replaced: the
+platform is shared, so a key identifies a person and carries individual quotas.
+→ [ADR-0006](decisions/0006-principals-not-api-keys.md)
 **Accepted:** lint, strict typecheck and 27 tests pass with 83% coverage; the API serves `/healthz`,
 `/readyz`, `/v1/models` and non-streaming `/v1/chat/completions` with no paid resource required.
 
@@ -18,10 +20,18 @@ cache, OCI provider, offline tests, CI, arm64 Dockerfile, compose.
 **Done:** evaluation harness — frozen task set, deterministic graders, benchmark runner, spend
 ledger and the two caps.
 
-**Next, in this order:** calibration run of `baseline-v1` across the three callable OCI models to
-establish the baseline and the real per-token cost; then `LocalLlamaProvider` over llama.cpp with
-GGUF selection in the 1B-4B range driven by the same harness; then streaming SSE with cancellation,
-`/v1/embeddings` on `cohere.embed-v4.0`, and the first web UI on assistant-ui.
+**Done:** `baseline-v1` and `baseline-v2` measured across the three callable OCI models. The
+conclusion shaped the router: at this scale the harness separates cost and latency cleanly and does
+not separate quality, so routing goes on cost and latency under a quality floor.
+→ [baseline-v2 results](research/baseline-v2-results.md)
+
+**Done:** principals, per-person quotas and a deployment-wide cap, required by the platform being
+shared.
+
+**Next, in this order:** `LocalLlamaProvider` over llama.cpp with GGUF selection in the 1B-4B range
+driven by the same harness — it is also the only option that keeps prompt content on our own host;
+then streaming SSE with cancellation, `/v1/embeddings` on `cohere.embed-v4.0`, and the first web UI
+on assistant-ui.
 
 The order changed on 2026-11-24. Local inference was first only because it was free; with spend
 authorised, the baseline measurement comes first — it is what makes every later component
@@ -33,11 +43,17 @@ from cassettes with zero provider calls; and the OpenAI SDK holds a streaming co
 local model.
 
 ## Phase 3 — OCI Deployment
-Terraform modules, each resource classified Always-Free-confirmed / credit-covered / pay-per-use /
-unverified, defaulting to the first only. ARM64 deploy, TLS, restrictive NSG, instance principal,
-tested backup and restore.
-**Acceptance:** the API answers over HTTPS with authentication, inside the approved envelope, and the
-infrastructure can be destroyed and rebuilt from code.
+Terraform modules in the private `lyren-infra` repository, each resource classified
+Always-Free-confirmed / credit-covered / pay-per-use / unverified, defaulting to the first only.
+ARM64 deploy, TLS, restrictive NSG, instance principal, tested backup and restore.
+
+Because real people will use it, this phase also carries a **durable audit log** of per-principal
+operations and the **disclosure** that prompts sent to OCI-backed aliases are processed by Oracle as
+a third party. Neither is optional once the service is reachable by someone other than the operator.
+
+**Acceptance:** the API answers over HTTPS with authentication, inside the approved envelope; the
+infrastructure can be destroyed and rebuilt from code; and every call is attributable to a principal
+in a log that survives a restart.
 
 ## Phase 4 — Model Routing
 Alias policies driven by measured cost and latency; optional OCI provider behind an explicit budget;
@@ -49,6 +65,12 @@ justified by numbers rather than preference.
 Oracle AI Database persistence; vector index at 1536 dimensions; document pipeline (TXT, Markdown,
 text-bearing PDF, code, JSON); hybrid retrieval with rerank; the four memory types; verifiable
 deletion.
+
+This is the phase where Lyren first stores other people's data, so it carries the data-protection
+work with it rather than after it: per-principal isolation, retention with automatic expiry,
+opt-in for persistent sensitive content, an access path for a person's own data, and deletion that
+also clears derived embeddings and cassettes. A shared counter for rate limiting lands here too,
+replacing the in-process one.
 **Acceptance:** answers cite retrieved sources, interpretation is distinguished from retrieval, and
 Recall@K, MRR and citation precision are measured on a frozen set.
 

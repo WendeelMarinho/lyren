@@ -12,6 +12,9 @@ build/
 .env
 .env.*
 !.env.example
+principals.json
+principals.*.json
+!principals.example.json
 .lyren-cache/
 models/
 *.gguf

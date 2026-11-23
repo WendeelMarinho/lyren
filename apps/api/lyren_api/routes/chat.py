@@ -12,12 +12,13 @@ from lyren_api.deps import (
     ProviderUnavailable,
     get_chat_provider,
     get_registry,
-    get_settings,
-    require_api_key,
+    get_usage_meter,
+    require_principal,
 )
-from lyren_core.errors import ProviderError
+from lyren_core.errors import ForbiddenError, ProviderError
+from lyren_core.identity import Principal
 from lyren_core.ids import current_request_id
-from lyren_core.settings import Settings
+from lyren_core.metering import UsageMeter
 from lyren_inference.ports import (
     Availability,
     ChatProvider,
@@ -54,9 +55,9 @@ class ChatCompletionIn(BaseModel):
 @router.post("/v1/chat/completions")
 def chat_completions(
     body: ChatCompletionIn,
-    _: str = Depends(require_api_key),
+    principal: Principal = Depends(require_principal),
     registry: ModelRegistry = Depends(get_registry),
-    settings: Settings = Depends(get_settings),
+    meter: UsageMeter = Depends(get_usage_meter),
     provider: ChatProvider | ProviderUnavailable = Depends(get_chat_provider),
 ) -> dict[str, object]:
     if body.stream:
@@ -65,12 +66,20 @@ def chat_completions(
             detail="SSE lands with the Phase 2 inference gateway",
         )
 
+    if not principal.may_use(body.model):
+        raise ForbiddenError(f"{principal.id} is not permitted to use {body.model}")
+
+    meter.check(principal)
+
     if isinstance(provider, ProviderUnavailable):
         raise ProviderError("no chat provider is configured", detail=provider.reason)
 
     alias = registry.alias(body.model)
     candidates = registry.resolve(body.model)
-    budget = alias.max_output_tokens if alias else settings.max_output_tokens
+    budget = min(
+        alias.max_output_tokens if alias else principal.quota.max_output_tokens,
+        principal.quota.max_output_tokens,
+    )
     request = ChatRequest(
         messages=tuple(Message(role=Role(m.role), content=m.content) for m in body.messages),
         max_output_tokens=min(body.max_tokens or budget, budget),
@@ -79,6 +88,12 @@ def chat_completions(
     )
 
     response = _call_with_fallback(provider, registry, candidates, request)
+    if not response.from_cache:
+        meter.record(
+            principal,
+            prompt_tokens=response.usage.prompt_tokens,
+            completion_tokens=response.usage.completion_tokens,
+        )
 
     payload: dict[str, object] = {
         "id": f"chatcmpl-{uuid.uuid4().hex[:24]}",
@@ -92,7 +107,11 @@ def chat_completions(
                 "finish_reason": response.finish_reason,
             }
         ],
-        "lyren": {"request_id": current_request_id(), "from_cache": response.from_cache},
+        "lyren": {
+            "request_id": current_request_id(),
+            "from_cache": response.from_cache,
+            "principal": principal.id,
+        },
     }
     if response.usage.total_tokens is not None:
         payload["usage"] = {

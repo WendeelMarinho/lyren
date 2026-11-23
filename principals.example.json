@@ -1,0 +1,49 @@
+{
+  "_comment": [
+    "Copy to principals.json, which is git-ignored. Only key hashes belong here, never keys.",
+    "Mint a key and its hash:  KEY=$(openssl rand -hex 32); echo $KEY; printf %s $KEY | sha256sum",
+    "Hand the key to the person over a channel you trust, and keep only the hash.",
+    "To revoke, set revoked_at. Do not delete the record: the audit trail needs it."
+  ],
+  "principals": [
+    {
+      "id": "ana",
+      "name": "Ana Souza",
+      "quota": { "requests_per_minute": 20, "calls_per_day": 300, "max_output_tokens": 2048 }
+    },
+    {
+      "id": "bruno",
+      "name": "Bruno Lima",
+      "quota": { "requests_per_minute": 10, "calls_per_day": 100, "max_output_tokens": 1024 },
+      "allowed_models": ["lyren/fast", "lyren/code"]
+    },
+    {
+      "id": "demo",
+      "name": "Read-only demo",
+      "quota": { "requests_per_minute": 3, "calls_per_day": 20, "max_output_tokens": 512 },
+      "allowed_models": ["lyren/fast"],
+      "enabled": false
+    }
+  ],
+  "api_keys": [
+    {
+      "key_hash": "replace-with-the-sha256-of-ana-s-key",
+      "principal_id": "ana",
+      "label": "ana laptop",
+      "created_at": "2026-11-24"
+    },
+    {
+      "key_hash": "replace-with-the-sha256-of-bruno-s-key",
+      "principal_id": "bruno",
+      "label": "bruno cli",
+      "created_at": "2026-11-24"
+    },
+    {
+      "key_hash": "sha256-of-a-key-that-no-longer-works",
+      "principal_id": "ana",
+      "label": "rotated out",
+      "created_at": "2026-06-01",
+      "revoked_at": "2026-11-20"
+    }
+  ]
+}

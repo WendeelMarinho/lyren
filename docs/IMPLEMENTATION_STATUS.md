@@ -1,6 +1,6 @@
 # Implementation Status
 
-Updated **2026-11-24** (second pass). The one place that says what is real. Five states, and nothing is promoted
+Updated **2026-11-24** (third pass). The one place that says what is real. Five states, and nothing is promoted
 without the verification named.
 
 - **Verified** — implemented, with passing automated tests.
@@ -17,7 +17,17 @@ without the verification named.
 | `GET /v1/models`, OpenAI shape, excludes non-callable models | `tests/unit/test_api.py` |
 | `GET /lyren/v1/models` exposing availability verdicts | `tests/unit/test_api.py` |
 | `POST /v1/chat/completions`, non-streaming | `tests/unit/test_api.py` |
-| Bearer auth against SHA-256 hashes, constant-time compare | `tests/unit/test_api.py` |
+| A key resolves to a named principal; unknown, revoked and disabled fail alike | `tests/unit/test_identity.py` |
+| Revoking one key leaves a principal's other keys working | `tests/unit/test_identity.py` |
+| A key referencing a missing principal is rejected at construction | `tests/unit/test_identity.py` |
+| Per-principal rate limit and daily cap, refused before any provider call | `test_metering.py`, `test_api.py` |
+| One principal exhausting its quota does not block another | `test_metering.py`, `test_api.py` |
+| Deployment-wide daily cap binds even when no principal is near its own | `tests/unit/test_metering.py` |
+| Daily counters reset on a new day; the rate window slides | `tests/unit/test_metering.py` |
+| Model allow-list enforced on call and reflected in `/v1/models` | `tests/unit/test_api.py` |
+| Output tokens capped by the stricter of alias budget and principal quota | `tests/unit/test_api.py` |
+| The dev auth shortcut is refused outside a local environment | `tests/unit/test_api.py` |
+| `LYREN_API_KEY_HASHES` parses from the environment as comma-separated | `tests/unit/test_api.py` |
 | Streaming refused explicitly rather than ignored | `tests/unit/test_api.py` |
 | Alias resolution, ordering, fallback, probe recording | `test_api.py`, `test_registry.py` |
 | Per-alias output-token cap overriding a larger client request | `tests/unit/test_api.py` |
@@ -39,7 +49,7 @@ without the verification named.
 | Provider 401/403 reported as a credential failure, not a model failure | `tests/unit/test_oci_provider.py` |
 
 Gates: `ruff check`, `ruff format --check`, `mypy --strict` over `packages` and `apps`, and
-`pytest` — **81 tests passing, 86% coverage** (floor 80%, enforced in CI).
+`pytest` — **107 tests passing, 88% coverage** (floor 80%, enforced in CI).
 
 ## Implemented, hand-checked
 
@@ -54,6 +64,12 @@ Local llama.cpp provider as a fourth routing arm; streaming SSE; `/v1/embeddings
 Terraform modules; Oracle AI Database persistence; document pipeline and hybrid retrieval; memory
 system; LangGraph orchestration; isolated executor; Lyren Code via opencode; evaluation harness.
 
+Required by the platform being shared rather than personal, and not yet built: a durable audit
+log, per-principal data isolation in storage, verifiable deletion of a person's data, disclosure
+that prompts reach Oracle as a third-party processor, and retention with automatic expiry. All are
+Phase 3 or 5, and all are cheaper to build before there is data than to retrofit after. See
+[SECURITY_MODEL.md](SECURITY_MODEL.md).
+
 Documents not yet written, deliberately left absent rather than stubbed:
 `OCI_COST_MODEL.md`, `DATA_MODEL.md`, `API_SPECIFICATION.md` (the OpenAPI schema at `/openapi.json`
 is currently the contract), `TEST_STRATEGY.md`.
@@ -67,6 +83,7 @@ is currently the contract), `TEST_STRATEGY.md`.
 | Gemini and Grok model families | per-model request quotas are 0 in this tenancy |
 | `openai.gpt-oss-120b` / `20b` | catalog-listed, 404 on call |
 | Cross-AD high availability | one availability domain |
+| A shared rate counter across workers | metering is in-process; the deployment runs one worker until Phase 5 |
 
 ## Needs authorisation
 

@@ -4,7 +4,8 @@ import time
 
 from fastapi import APIRouter, Depends
 
-from lyren_api.deps import get_registry, require_api_key
+from lyren_api.deps import get_registry, require_principal
+from lyren_core.identity import Principal
 from lyren_inference.ports import Capability
 from lyren_inference.registry import ModelRegistry
 
@@ -15,24 +16,26 @@ _CREATED = int(time.time())
 
 @router.get("/v1/models")
 def list_models(
-    _: str = Depends(require_api_key),
+    principal: Principal = Depends(require_principal),
     registry: ModelRegistry = Depends(get_registry),
 ) -> dict[str, object]:
-    """OpenAI-shaped listing. Only callable models and aliases appear here."""
+    """OpenAI-shaped listing, narrowed to what this principal may actually call."""
     entries = [
         {"id": spec.id, "object": "model", "created": _CREATED, "owned_by": spec.vendor}
         for spec in registry.callable_specs(capability=Capability.CHAT)
+        if principal.may_use(spec.id)
     ]
     entries += [
         {"id": policy.alias, "object": "model", "created": _CREATED, "owned_by": "lyren"}
         for policy in registry.aliases()
+        if principal.may_use(policy.alias)
     ]
     return {"object": "list", "data": entries}
 
 
 @router.get("/lyren/v1/models")
 def list_models_native(
-    _: str = Depends(require_api_key),
+    _: Principal = Depends(require_principal),
     registry: ModelRegistry = Depends(get_registry),
 ) -> dict[str, object]:
     """Native listing: the whole registry, including what is not callable and why."""

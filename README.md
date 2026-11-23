@@ -1,7 +1,13 @@
 # Lyren
 
-A personal AI platform on Oracle Cloud Infrastructure: its own runtime, data, agents, models and
+An AI platform on Oracle Cloud Infrastructure with its own runtime, data, agents, models and
 infrastructure — not a wrapper over someone else's API.
+
+Lyren serves a **small group of named people**, not one owner and not the open internet. Every API
+key identifies a person, so usage is attributed, quotas are individual, and one key can be revoked
+without rotating everyone else's. It is built in the open because the engineering is the point: the
+reasoning behind each decision is recorded in [`docs/decisions/`](docs/decisions/), and every
+measurement is reproducible from the task sets and cassettes in the repository.
 
 **Status: Phase 1.** What works is listed below. Everything else is planned, and the code says so
 rather than pretending otherwise. See [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md).
@@ -15,6 +21,8 @@ rather than pretending otherwise. See [docs/IMPLEMENTATION_STATUS.md](docs/IMPLE
 | `GET /lyren/v1/models` (native, with availability verdicts) | implemented, tested |
 | `POST /v1/chat/completions`, non-streaming | implemented, tested |
 | Pinned model registry + alias routing + fallback | implemented, tested |
+| Principals: per-person identity, quotas, model allow-lists, key revocation | implemented, tested |
+| Per-principal and deployment-wide spend caps | implemented, tested |
 | Record/replay cache for model calls | implemented, tested |
 | Evaluation harness: frozen task set, deterministic graders, benchmark runner | implemented, tested |
 | Spend guards: call cap and money cap, failing closed on unknown prices | implemented, tested |
@@ -30,15 +38,25 @@ uv venv --python 3.12
 uv pip install -e ".[dev]"
 
 cp .env.example .env
+cp principals.example.json principals.json
+
+# Mint a key, keep only its hash, and put the hash in principals.json
 KEY=$(openssl rand -hex 32)
 echo "your api key: $KEY"
-printf 'LYREN_API_KEY_HASHES=%s\n' "$(printf '%s' "$KEY" | sha256sum | cut -d' ' -f1)" >> .env
+printf '%s' "$KEY" | sha256sum
 
 .venv/bin/uvicorn lyren_api.main:app --reload
 ```
 
-The API refuses to start serving authenticated routes with an empty `LYREN_API_KEY_HASHES`: there is
-no unauthenticated mode. Only key hashes are stored, never the keys.
+There is **no unauthenticated mode**. A shared deployment needs `LYREN_PRINCIPALS_FILE`; only key
+hashes are stored, never the keys. `LYREN_API_KEY_HASHES` is a single-principal shortcut for local
+work and the API refuses it outside `LYREN_ENVIRONMENT=local`, because a shared deployment with no
+attribution is a configuration error rather than a convenience. See
+[ADR-0006](docs/decisions/0006-principals-not-api-keys.md).
+
+Each principal carries a rate limit, a daily call cap and an optional model allow-list, and
+`LYREN_DEPLOYMENT_CALLS_PER_DAY` bounds the whole deployment — the sum of individual quotas does
+not bound the bill.
 
 To reach OCI Generative AI, set `LYREN_OCI_ENABLED=true` and `LYREN_OCI_COMPARTMENT_ID`. **Every
 on-demand call bills.** Left off, the chat route reports the provider as unconfigured instead of
@@ -90,7 +108,7 @@ spending uncapped. See [ADR-0005](docs/decisions/0005-spend-control-in-process.m
 
 ```
 apps/api            FastAPI application
-packages/core       settings, errors, structured logging, request ids
+packages/core       settings, errors, structured logging, request ids, principals, metering
 packages/inference  model registry, provider ports, record/replay cache, OCI provider
 packages/evaluation frozen task sets, graders, benchmark runner, spend guards
 tests/unit          offline tests — no network, no credentials

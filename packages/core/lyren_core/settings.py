@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from enum import StrEnum
 from pathlib import Path
+from typing import Annotated
 
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Environment(StrEnum):
@@ -34,7 +35,11 @@ class Settings(BaseSettings):
     environment: Environment = Environment.LOCAL
     log_level: str = "INFO"
 
-    api_key_hashes: tuple[str, ...] = ()
+    principals_file: Path | None = None
+    """The real authentication mechanism for a shared deployment."""
+
+    api_key_hashes: Annotated[tuple[str, ...], NoDecode] = ()
+    """Single-principal development shortcut. Refused outside a local environment."""
 
     oci_enabled: bool = False
     oci_compartment_id: str | None = None
@@ -46,6 +51,9 @@ class Settings(BaseSettings):
         default=False,
         description="Gate for any provider that bills; fallback never crosses it without consent.",
     )
+    deployment_calls_per_day: int = 2000
+    """Binds the whole deployment, because the sum of per-principal quotas does not."""
+
     max_output_tokens: int = 1024
     request_timeout_seconds: float = 120.0
 
@@ -55,6 +63,12 @@ class Settings(BaseSettings):
     @field_validator("api_key_hashes", mode="before")
     @classmethod
     def _split_hashes(cls, value: object) -> object:
+        """Comma-separated, not JSON.
+
+        `NoDecode` is what makes this validator reachable: without it pydantic-settings tries to
+        JSON-decode a complex field straight from the environment and fails before any validator
+        runs, so the documented `LYREN_API_KEY_HASHES=<hash>,<hash>` form never worked.
+        """
         if isinstance(value, str):
             return tuple(item.strip() for item in value.split(",") if item.strip())
         return value
@@ -62,3 +76,11 @@ class Settings(BaseSettings):
     @property
     def oci_ready(self) -> bool:
         return self.oci_enabled and bool(self.oci_compartment_id)
+
+    @property
+    def is_local(self) -> bool:
+        return self.environment is Environment.LOCAL
+
+    @property
+    def auth_configured(self) -> bool:
+        return self.principals_file is not None or bool(self.api_key_hashes)

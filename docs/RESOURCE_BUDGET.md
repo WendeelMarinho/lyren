@@ -43,7 +43,13 @@ Observability stays off-box. Self-hosting Prometheus and Grafana would cost roug
 flag, so a fallback never crosses into a billing provider implicitly. Per-alias `max_output_tokens`
 caps a client that asks for more.
 
-`lyren_eval.budget.BudgetGuard` is the hard stop: a **call cap** that works without prices, and a
+The budget is **shared among several people**, so there are two layers. Per-principal quotas
+(`requests_per_minute`, `calls_per_day`) stop one person starving another;
+`LYREN_DEPLOYMENT_CALLS_PER_DAY` stops the group exhausting the bill, because the sum of individual
+quotas bounds nothing financially. Both are checked before any provider call, so a refused request
+costs nothing. → [ADR-0006](decisions/0006-principals-not-api-keys.md)
+
+For benchmark runs, `lyren_eval.budget.BudgetGuard` is the hard stop: a **call cap** that works without prices, and a
 **money cap** that refuses the call when a model's price is unknown rather than assuming it is free.
 An OCI budget only alerts and is not the control.
 → [ADR-0005](decisions/0005-spend-control-in-process.md)

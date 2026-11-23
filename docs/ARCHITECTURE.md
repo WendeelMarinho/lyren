@@ -7,7 +7,11 @@ cost RAM.
 ```
 Clients (OpenAI SDK, curl, CLI, web UI)
         |
-   Edge: TLS, bearer auth, rate limiting            [Phase 3]
+   Edge: TLS                                        [Phase 3]
+        |
+   Identity and metering  (packages/core)
+     PrincipalStore  -> who is calling, what they may use      IMPLEMENTED
+     UsageMeter      -> per-principal + deployment caps        IMPLEMENTED
         |
    Lyren API  (apps/api)
      /healthz /readyz /v1/models /v1/chat/completions   IMPLEMENTED
@@ -41,6 +45,16 @@ recording and replaying is orthogonal to which provider is in use.
 chat route records a verdict when a candidate fails, so catalog drift is observed rather than
 assumed. This exists because the OCI catalog demonstrably lies; see
 [OCI_DISCOVERY.md](OCI_DISCOVERY.md).
+
+**Identity precedes everything.** A key resolves to a `Principal`, and the principal — not the
+request — decides the model allow-list, the output-token ceiling and the quota. Both caps are
+checked before any provider call, so a refused request costs nothing. See
+[ADR-0006](decisions/0006-principals-not-api-keys.md).
+
+**Routing decisions are made on cost and latency under a quality floor**, not on a quality ranking.
+That is a measurement result, not a preference: at the scale of a hand-written benchmark, latency
+and token cost separate the models clearly and quality does not.
+→ [baseline-v2 results](research/baseline-v2-results.md)
 
 **Aliases are the routing identity.** `lyren/fast`, `lyren/deep`, `lyren/code`, `lyren/research`,
 `lyren/auto` are virtual models with an ordered candidate list and their own output budget, timeout

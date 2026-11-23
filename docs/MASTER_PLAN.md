@@ -4,9 +4,19 @@ Entry point. Each section links to the document that owns the detail; this file 
 governs every decision.
 
 ## Objective
-A personal AI platform with its own runtime, data, agents, models and infrastructure. The engineering
-challenge is the intelligence layer — planning, memory, routing, evaluation, durable execution — not
-connecting to an LLM API.
+An AI platform with its own runtime, data, agents, models and infrastructure, serving a **small group
+of named people**. The engineering challenge is the intelligence layer — planning, memory, routing,
+evaluation, durable execution — not connecting to an LLM API.
+
+Two things follow from it being shared rather than personal, and they are not cosmetic:
+
+- **Identity is foundational.** Attribution, per-person quotas, individual key revocation and
+  memory ownership all depend on knowing who is calling. → [ADR-0006](decisions/0006-principals-not-api-keys.md)
+- **The budget is shared and has no automatic stop.** Per-person quotas protect people from each
+  other; only a deployment-wide cap protects the bill. → [ADR-0005](decisions/0005-spend-control-in-process.md)
+
+It is also built in the open, because demonstrating the engineering is part of the objective: the
+reasoning is in `decisions/`, and every measurement is reproducible from the repository.
 
 ## Governing constraints
 1. **Size for ~2 OCPU ARM / 12 GB RAM.** The tenancy's service limits are higher, but a limit is a
@@ -19,7 +29,8 @@ connecting to an LLM API.
 5. **No fake features.** Unfinished capability stays disabled and errors explicitly.
    → [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)
 6. **Reuse before building.** → [OPEN_SOURCE_REUSE.md](OPEN_SOURCE_REUSE.md)
-7. **Security from v1.** → [SECURITY_MODEL.md](SECURITY_MODEL.md)
+7. **Security and data protection from v1**, including for the people using it, not only for the
+   operator. → [SECURITY_MODEL.md](SECURITY_MODEL.md)
 
 ## Build order, and why it is this order
 The evaluation harness comes early, not last. Built after the planner, memory and routing, every
@@ -49,4 +60,9 @@ authorised provider reachable through the same contract; history persisted; cred
 infrastructure rebuildable from code; tests automated; resource use monitored; a tested path to memory
 and agents.
 
-Current state: items 3 and 8 are met, 6 partially. The rest is Phase 2 onward.
+Current state: items 3 and 8 are met; 6 is met for credentials at rest and in transit to the
+provider, and incomplete until there is TLS and an audit log. The rest is Phase 2 onward.
+
+Because the platform is shared, two criteria are added: each person's usage is attributable and
+individually bounded (met), and each person's data is isolated and deletable on request (not met —
+there is no persistence yet, which is also why it is not yet a breach of it).
